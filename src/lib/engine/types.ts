@@ -1,12 +1,12 @@
 /**
- * Modelul de date al configuratorului WATTNET — faza 1 („la roșu").
+ * Modelul de date al configuratorului WATTNET — faza 1 („la rosu").
  *
- * Regula de bază: o singură configurație de proiect din care derivă
- * inventarul, tabloul, devizul, planul de execuție și verificările.
- * Motorul (src/lib/engine) nu depinde de React și se testează separat.
+ * Regula de baza: o singura configuratie de proiect din care deriva
+ * inventarul, tabloul, devizul, planul de executie si verificarile.
+ * Motorul (src/lib/engine) nu depinde de React si se testeaza separat.
  */
 
-/** Sursa unei valori: introdusă/măsurată de electrician sau estimată. */
+/** Sursa unei valori: introdusa/masurata de electrician sau estimata. */
 export type ValueSource = "masurat" | "estimat";
 
 export type MeasuredValue = {
@@ -16,7 +16,7 @@ export type MeasuredValue = {
 
 export type LevelKind = "subsol" | "parter" | "etaj" | "mansarda" | "anexa";
 
-/** Tipurile de doze/puncte din faza „la roșu". */
+/** Tipurile de doze/puncte din faza „la rosu". */
 export const POINT_KINDS = [
   "priza",
   "intrerupator",
@@ -28,10 +28,10 @@ export type PointKind = (typeof POINT_KINDS)[number];
 
 export const POINT_LABELS: Record<PointKind, string> = {
   priza: "Doze prize",
-  intrerupator: "Doze întrerupătoare",
+  intrerupator: "Doze intrerupatoare",
   iluminat: "Doze/puncte iluminat",
-  dedicat: "Doze consumatori dedicați",
-  jonctiune: "Doze de legătură",
+  dedicat: "Doze consumatori dedicati",
+  jonctiune: "Doze de legatura",
 };
 
 export type PointCounts = Record<PointKind, number>;
@@ -40,11 +40,11 @@ export type Room = {
   id: string;
   name: string;
   points: PointCounts;
-  /** Metri de bandă LED (traseu de alimentare), dacă există. */
+  /** Metri de banda LED (traseu de alimentare), daca exista. */
   ledStripM: number;
   /**
-   * Lungimea traseelor din încăpere (tub/cablu până la doze).
-   * Dacă lipsește, motorul folosește o estimare din setări și o marchează ca estimare.
+   * Lungimea traseelor din incapere (tub/cablu pana la doze).
+   * Daca lipseste, motorul foloseste o estimare din setari si o marcheaza ca estimare.
    */
   routeM?: MeasuredValue;
   notes?: string;
@@ -55,7 +55,7 @@ export type Level = {
   name: string;
   kind: LevelKind;
   rooms: Room[];
-  /** Tabloul care alimentează nivelul (opțional în faza 1). */
+  /** Tabloul care alimenteaza nivelul (optional in faza 1). */
   panelId?: string;
 };
 
@@ -72,40 +72,40 @@ export type DeviceKind =
 
 export const DEVICE_LABELS: Record<DeviceKind, string> = {
   MCB: "Disjunctor (MCB)",
-  RCD: "Diferențial (RCD)",
-  RCBO: "Disjunctor diferențial (RCBO)",
+  RCD: "Diferential (RCD)",
+  RCBO: "Disjunctor diferential (RCBO)",
   SPD: "Desc. supratensiune (SPD)",
-  separator: "Separator / întrerupător general",
+  separator: "Separator / intrerupator general",
   releu: "Releu",
   contactor: "Contactor",
-  "sonerie-sursa": "Sursă / sonerie",
+  "sonerie-sursa": "Sursa / sonerie",
   altul: "Alt aparat",
 };
 
 export type PanelDevice = {
   id: string;
   kind: DeviceKind;
-  /** Eticheta circuitului / funcția, ex. „Prize bucătărie". */
+  /** Eticheta circuitului / functia, ex. „Prize bucatarie". */
   label: string;
   poles: 1 | 2 | 3 | 4;
-  /** Lățimea în module DIN (18 mm). */
+  /** Latimea in module DIN (18 mm). */
   modules: number;
   /** Caracteristici nominale, text liber (ex. „C16", „40A 30mA tip A"). Nu se deduc automat. */
   rating?: string;
-  /** Rândul (șina DIN) pe care e montat, de la 0. */
+  /** Randul (sina DIN) pe care e montat, de la 0. */
   row: number;
 };
 
 export type Panel = {
   id: string;
   name: string;
-  /** Tabloul din care este alimentat (cascadă). Lipsă = tablou principal. */
+  /** Tabloul din care este alimentat (cascada). Lipsa = tablou principal. */
   parentPanelId?: string;
-  /** Locația, ex. nivelul sau anexa. */
+  /** Locatia, ex. nivelul sau anexa. */
   levelId?: string;
   rows: number;
   modulesPerRow: number;
-  /** Lungimea cablului de alimentare din tabloul părinte. */
+  /** Lungimea cablului de alimentare din tabloul parinte. */
   feederM?: MeasuredValue;
   devices: PanelDevice[];
 };
@@ -129,11 +129,11 @@ export type Project = {
   client: Client;
   buildingType: BuildingType;
   supply: SupplyType;
-  /** Faza 1 = „la roșu"; faza 2 „la gata" va fi adăugată ulterior. */
+  /** Faza 1 = „la rosu"; faza 2 „la gata" va fi adaugata ulterior. */
   stage: "la-rosu";
   levels: Level[];
   panels: Panel[];
-  /** Număr de deplasări estimate. */
+  /** Numar de deplasari estimate. */
   trips: number;
   discountPct: number;
   vatPct: number;
@@ -143,10 +143,10 @@ export type Project = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Catalogul de manoperă                                               */
+/* Catalogul de manopera                                               */
 /* ------------------------------------------------------------------ */
 
-/** De unde își ia o operațiune cantitatea. Cantitățile vin din configurație, nu se introduc în deviz. */
+/** De unde isi ia o operatiune cantitatea. Cantitatile vin din configuratie, nu se introduc in deviz. */
 export type QuantitySource =
   | { kind: "points"; point: PointKind }
   | { kind: "pointsTotal" }
@@ -172,11 +172,11 @@ export type ExecutionStage =
 export const STAGE_LABELS: Record<ExecutionStage, string> = {
   trasare: "1. Trasare",
   doze: "2. Montaj doze",
-  trasee: "3. Trasee, tuburi și cabluri",
+  trasee: "3. Trasee, tuburi si cabluri",
   tablouri: "4. Montaj tablouri",
-  conexiuni: "5. Echipare și conexiuni tablouri",
-  verificari: "6. Etichetare și verificări",
-  logistica: "Logistică",
+  conexiuni: "5. Echipare si conexiuni tablouri",
+  verificari: "6. Etichetare si verificari",
+  logistica: "Logistica",
 };
 
 export const STAGE_ORDER: ExecutionStage[] = [
@@ -195,17 +195,17 @@ export type LaborOperation = {
   unit: string;
   stage: ExecutionStage;
   quantity: QuantitySource;
-  /** Tarif unitar (lei/unitate, fără TVA). Are prioritate față de timp × tarif orar. */
+  /** Tarif unitar (lei/unitate, fara TVA). Are prioritate fata de timp × tarif orar. */
   unitPrice?: number | null;
-  /** Timp standard (minute/unitate), pentru planificare și pentru calculul cu tarif orar. */
+  /** Timp standard (minute/unitate), pentru planificare si pentru calculul cu tarif orar. */
   minutesPerUnit?: number | null;
   enabled: boolean;
 };
 
 export type PricingSettings = {
-  /** Tarif orar (lei/oră, fără TVA). */
+  /** Tarif orar (lei/ora, fara TVA). */
   hourlyRate?: number | null;
-  /** Metri de traseu estimați per doză, când traseul nu e măsurat. */
+  /** Metri de traseu estimati per doza, cand traseul nu e masurat. */
   defaultRouteMPerPoint: number;
   operations: LaborOperation[];
 };
@@ -222,7 +222,7 @@ export type CheckResult = {
   status: CheckStatus;
   title: string;
   message: string;
-  /** Referința normativă, doar când regula a fost verificată pe text. */
+  /** Referinta normativa, doar cand regula a fost verificata pe text. */
   reference?: string;
   target?: string;
 };

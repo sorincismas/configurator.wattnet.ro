@@ -16,7 +16,7 @@ export type QuoteLine = {
   unit: string;
   stage: ExecutionStage;
   quantity: number;
-  /** Partea din cantitate care provine din estimări (ex. trasee nemăsurate). */
+  /** Partea din cantitate care provine din estimari (ex. trasee nemasurate). */
   estimatedQuantity: number;
   unitPrice: number | null;
   minutes: number | null;
@@ -26,7 +26,7 @@ export type QuoteLine = {
 
 export type Quote = {
   lines: QuoteLine[];
-  /** Linii cu cantitate > 0 fără tarif: totalul este incomplet. */
+  /** Linii cu cantitate > 0 fara tarif: totalul este incomplet. */
   unpricedLines: QuoteLine[];
   laborSubtotal: number;
   discountPct: number;
@@ -62,7 +62,7 @@ export function quantityFor(src: QuantitySource, inv: Inventory): QuantityWithSo
     case "deviceModules":
       return plain(inv.deviceModules);
     case "trips":
-      return plain(0); // completat din proiect în computeQuote
+      return plain(0); // completat din proiect in computeQuote
     case "fixed":
       return plain(src.quantity);
   }
@@ -144,7 +144,7 @@ export type PlanStage = {
   stage: ExecutionStage;
   lines: QuoteLine[];
   minutes: number;
-  /** Linii fără timp standard: durata etapei e incompletă. */
+  /** Linii fara timp standard: durata etapei e incompleta. */
   missingTime: number;
 };
 

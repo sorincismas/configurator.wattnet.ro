@@ -40,5 +40,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# arhiva de import (se poate șterge)
+# arhiva de import (se poate sterge)
 _import.zip

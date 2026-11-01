@@ -28,7 +28,7 @@ const MOD = 34; // px per modul DIN
 const ROW_H = 150;
 const PAD = 18;
 
-/** Reprezentare vizuală orientativă a tabloului (nu e desen de execuție). */
+/** Reprezentare vizuala orientativa a tabloului (nu e desen de executie). */
 export function PanelSvg({ panel }: { panel: Panel }) {
   const lay = layoutPanel(panel);
   const maxUsed = Math.max(panel.modulesPerRow, ...lay.rows.map((r) => r.used));
@@ -49,11 +49,11 @@ export function PanelSvg({ panel }: { panel: Panel }) {
         const capW = r.capacity * MOD;
         return (
           <g key={r.row}>
-            {/* zona utilă a șinei */}
+            {/* zona utila a sinei */}
             <rect x={PAD} y={y0 + 6} width={capW} height={ROW_H - 12} fill="#ffffff" stroke="#cbd5e1" rx={4} />
-            {/* șina DIN */}
+            {/* sina DIN */}
             <rect x={PAD - 6} y={y0 + ROW_H / 2 - 8} width={Math.max(capW, r.used * MOD) + 12} height={16} fill="#94a3b8" />
-            {/* grilă module */}
+            {/* grila module */}
             {Array.from({ length: r.capacity + 1 }, (_, m) => (
               <line key={m} x1={PAD + m * MOD} x2={PAD + m * MOD} y1={y0 + ROW_H - 10} y2={y0 + ROW_H - 4} stroke="#94a3b8" />
             ))}
@@ -101,7 +101,7 @@ export function PanelSvg({ panel }: { panel: Panel }) {
               );
             })}
             <text x={PAD + 4} y={y0 + ROW_H - 1} fontSize={10} fill={r.overflow ? "#b91c1c" : "#475569"}>
-              {`Șina ${r.row + 1}: ${r.used}/${r.capacity} mod.`}
+              {`Sina ${r.row + 1}: ${r.used}/${r.capacity} mod.`}
             </text>
           </g>
         );

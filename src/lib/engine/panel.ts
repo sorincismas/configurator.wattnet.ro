@@ -7,7 +7,7 @@ export type RowLayout = {
   used: number;
   free: number;
   overflow: boolean;
-  /** Aparatele în ordinea de pe șină, cu poziția de start în module. */
+  /** Aparatele in ordinea de pe sina, cu pozitia de start in module. */
   placed: { device: PanelDevice; start: number }[];
 };
 
@@ -18,13 +18,13 @@ export type PanelLayout = {
   used: number;
   free: number;
   overflow: boolean;
-  /** Aparate cu rând inexistent (ex. după micșorarea tabloului). */
+  /** Aparate cu rand inexistent (ex. dupa micsorarea tabloului). */
   orphanDevices: PanelDevice[];
 };
 
 /**
- * Așază aparatele pe șine în ordinea din listă. Nu mută automat aparatele
- * între rânduri: depășirea unui rând este raportată, nu ascunsă.
+ * Asaza aparatele pe sine in ordinea din lista. Nu muta automat aparatele
+ * intre randuri: depasirea unui rand este raportata, nu ascunsa.
  */
 export function layoutPanel(panel: Panel): PanelLayout {
   const rowsCount = Math.max(0, Math.floor(safe(panel.rows)));
@@ -65,7 +65,7 @@ export function layoutPanel(panel: Panel): PanelLayout {
   };
 }
 
-/** Returnează lanțul de tablouri implicate într-o buclă de alimentare, dacă există. */
+/** Returneaza lantul de tablouri implicate intr-o bucla de alimentare, daca exista. */
 export function findCascadeCycle(panels: Panel[]): string[] | null {
   const byId = new Map(panels.map((p) => [p.id, p]));
   for (const start of panels) {
@@ -80,7 +80,7 @@ export function findCascadeCycle(panels: Panel[]): string[] | null {
   return null;
 }
 
-/** Adâncimea în cascadă (0 = principal). Returnează -1 dacă există buclă. */
+/** Adancimea in cascada (0 = principal). Returneaza -1 daca exista bucla. */
 export function cascadeDepth(panel: Panel, panels: Panel[]): number {
   const byId = new Map(panels.map((p) => [p.id, p]));
   let depth = 0;
@@ -95,7 +95,7 @@ export function cascadeDepth(panel: Panel, panels: Panel[]): number {
   return depth;
 }
 
-/** Ordonează tablourile: principal, apoi copiii lui (parcurgere în adâncime). */
+/** Ordoneaza tablourile: principal, apoi copiii lui (parcurgere in adancime). */
 export function orderPanels(panels: Panel[]): Panel[] {
   const ids = new Set(panels.map((p) => p.id));
   const roots = panels.filter((p) => !p.parentPanelId || !ids.has(p.parentPanelId));
@@ -106,7 +106,7 @@ export function orderPanels(panels: Panel[]): Panel[] {
     panels.filter((c) => c.parentPanelId === p.id).forEach(visit);
   };
   roots.forEach(visit);
-  // tablourile rămase sunt într-o buclă; le adăugăm ca să nu dispară din interfață
+  // tablourile ramase sunt intr-o bucla; le adaugam ca sa nu dispara din interfata
   panels.forEach((p) => {
     if (!out.includes(p)) out.push(p);
   });

@@ -17,13 +17,13 @@ export function ProjectTab({ project, update }: { project: Project; update: (fn:
           <Field label="Denumire">
             <TextInput value={project.name} onChange={(v) => update((p) => ({ ...p, name: v }))} />
           </Field>
-          <Field label="Tip clădire">
+          <Field label="Tip cladire">
             <Select<BuildingType>
               value={project.buildingType}
               options={[
-                { value: "casa", label: "Casă" },
+                { value: "casa", label: "Casa" },
                 { value: "apartament", label: "Apartament" },
-                { value: "comercial", label: "Spațiu comercial" },
+                { value: "comercial", label: "Spatiu comercial" },
               ]}
               onChange={(v) => update((p) => ({ ...p, buildingType: v }))}
             />
@@ -32,18 +32,18 @@ export function ProjectTab({ project, update }: { project: Project; update: (fn:
             <Select<SupplyType>
               value={project.supply}
               options={[
-                { value: "necunoscut", label: "Necunoscută" },
-                { value: "monofazat", label: "Monofazată" },
-                { value: "trifazat", label: "Trifazată" },
+                { value: "necunoscut", label: "Necunoscuta" },
+                { value: "monofazat", label: "Monofazata" },
+                { value: "trifazat", label: "Trifazata" },
               ]}
               onChange={(v) => update((p) => ({ ...p, supply: v }))}
             />
           </Field>
-          <Field label="Fază ofertare">
-            <Select value="la-rosu" options={[{ value: "la-rosu", label: "Faza 1 — la roșu" }]} onChange={() => {}} />
+          <Field label="Faza ofertare">
+            <Select value="la-rosu" options={[{ value: "la-rosu", label: "Faza 1 — la rosu" }]} onChange={() => {}} />
           </Field>
         </div>
-        <Field label="Observații">
+        <Field label="Observatii">
           <textarea
             className="mt-1 min-h-24 w-full rounded-md border border-slate-300 p-2 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
             value={project.notes ?? ""}
@@ -53,7 +53,7 @@ export function ProjectTab({ project, update }: { project: Project; update: (fn:
       </Card>
       <Card title="Beneficiar">
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Nume / firmă">
+          <Field label="Nume / firma">
             <TextInput value={project.client.name} onChange={(v) => setClient({ name: v })} />
           </Field>
           <Field label="Telefon">
@@ -66,13 +66,13 @@ export function ProjectTab({ project, update }: { project: Project; update: (fn:
             <TextInput value={project.client.locality ?? ""} onChange={(v) => setClient({ locality: v })} />
           </Field>
           <div className="sm:col-span-2">
-            <Field label="Adresă lucrare">
+            <Field label="Adresa lucrare">
               <TextInput value={project.client.address ?? ""} onChange={(v) => setClient({ address: v })} />
             </Field>
           </div>
         </div>
         <p className="mt-3 text-xs text-slate-500">
-          Datele se păstrează doar în acest browser. Folosește „Export JSON” pentru copii de siguranță.
+          Datele se pastreaza doar in acest browser. Foloseste „Export JSON” pentru copii de siguranta.
         </p>
       </Card>
     </div>

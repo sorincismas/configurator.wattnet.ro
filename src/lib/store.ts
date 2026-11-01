@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { defaultPricing, type PricingSettings, type Project } from "@/lib/engine";
 
 /**
- * Persistență locală (browser) pentru faza 1. Datele stau doar pe dispozitivul
- * curent; exportul JSON e copia de siguranță până la baza de date (Supabase).
+ * Persistenta locala (browser) pentru faza 1. Datele stau doar pe dispozitivul
+ * curent; exportul JSON e copia de siguranta pana la baza de date (Supabase).
  */
 const KEY_PROJECTS = "wattnet.projects.v1";
 const KEY_PRICING = "wattnet.pricing.v1";
@@ -24,11 +24,11 @@ function write(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    /* stocare indisponibilă sau plină — datele rămân în memorie */
+    /* stocare indisponibila sau plina — datele raman in memorie */
   }
 }
 
-/** Completează operațiunile noi din catalogul implicit, păstrând tarifele salvate. */
+/** Completeaza operatiunile noi din catalogul implicit, pastrand tarifele salvate. */
 function mergePricing(saved: PricingSettings | null): PricingSettings {
   const def = defaultPricing();
   if (!saved) return def;
@@ -47,7 +47,7 @@ export function useWorkspace() {
   const [currentId, setCurrentId] = useState<string | null>(null);
 
   useEffect(() => {
-    // citirea din localStorage se face doar în browser, după hidratare
+    // citirea din localStorage se face doar in browser, dupa hidratare
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setProjects(read<Project[]>(KEY_PROJECTS, []));
     setPricing(mergePricing(read<PricingSettings | null>(KEY_PRICING, null)));

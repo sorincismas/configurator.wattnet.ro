@@ -22,7 +22,7 @@ export function pointsTotal(p: PointCounts): number {
   return POINT_KINDS.reduce((s, k) => s + safe(p[k]), 0);
 }
 
-/** Cantitate cu evidența părții estimate. */
+/** Cantitate cu evidenta partii estimate. */
 export type QuantityWithSource = {
   total: number;
   measured: number;
@@ -79,7 +79,7 @@ export type Inventory = {
   feederM: QuantityWithSource;
   devices: number;
   deviceModules: number;
-  /** Tablouri secundare fără lungime de alimentare introdusă. */
+  /** Tablouri secundare fara lungime de alimentare introdusa. */
   feedersMissing: number;
 };
 

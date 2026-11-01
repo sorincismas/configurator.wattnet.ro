@@ -13,7 +13,7 @@ import { Badge, Button, Card, Field, NumberInput, hours, lei, num } from "./ui";
 const METHOD: Record<string, string> = {
   "tarif-unitar": "tarif unitar",
   "timp-x-tarif-orar": "timp × tarif orar",
-  "lipsa-tarif": "fără tarif",
+  "lipsa-tarif": "fara tarif",
 };
 
 export function QuoteTab({
@@ -36,20 +36,20 @@ export function QuoteTab({
     <div className="flex flex-col gap-4">
       {!q.complete && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 print:hidden">
-          <strong>Deviz incomplet:</strong> {q.unpricedLines.length} operațiuni nu au tarif (
+          <strong>Deviz incomplet:</strong> {q.unpricedLines.length} operatiuni nu au tarif (
           {q.unpricedLines.map((l) => l.name).join(", ")}).{" "}
           <button className="underline" onClick={goToPricing}>
-            Setează tarifele
+            Seteaza tarifele
           </button>
           .
         </div>
       )}
 
       <Card
-        title="Deviz de manoperă — faza „la roșu”"
+        title="Deviz de manopera — faza „la rosu”"
         actions={
           <Button variant="secondary" onClick={() => window.print()} className="print:hidden">
-            Tipărește / PDF
+            Tipareste / PDF
           </Button>
         }
       >
@@ -66,10 +66,10 @@ export function QuoteTab({
           <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-slate-300 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="py-2">Operațiune</th>
+                <th className="py-2">Operatiune</th>
                 <th className="py-2 text-right">Cantitate</th>
                 <th className="py-2 pl-2">UM</th>
-                <th className="py-2 text-right">Preț unitar</th>
+                <th className="py-2 text-right">Pret unitar</th>
                 <th className="py-2 text-right">Valoare</th>
                 <th className="py-2 pl-3 print:hidden">Calcul</th>
               </tr>
@@ -92,26 +92,26 @@ export function QuoteTab({
               ))}
             </tbody>
             <tfoot className="text-sm">
-              <Row label="Subtotal manoperă" value={lei(q.laborSubtotal)} />
+              <Row label="Subtotal manopera" value={lei(q.laborSubtotal)} />
               {q.discount > 0 && <Row label={`Discount ${num(q.discountPct)}%`} value={`− ${lei(q.discount)}`} />}
-              <Row label="Total fără TVA" value={lei(q.netTotal)} />
+              <Row label="Total fara TVA" value={lei(q.netTotal)} />
               <Row label={`TVA ${num(q.vatPct)}%`} value={lei(q.vat)} />
-              <Row label="Total de plată" value={lei(q.grandTotal)} strong />
+              <Row label="Total de plata" value={lei(q.grandTotal)} strong />
             </tfoot>
           </table>
         </div>
         {hasEstimates && (
           <p className="mt-2 text-xs text-amber-800">
-            * Cantitate care include lungimi estimate. Se recalculează după măsurarea traseelor.
+            * Cantitate care include lungimi estimate. Se recalculeaza dupa masurarea traseelor.
           </p>
         )}
         <p className="mt-2 text-xs text-slate-500">
-          Devizul cuprinde doar manopera pentru faza „la roșu” (doze, trasee, cabluri, montaj și echipare tablouri).
-          Materialele și faza „la gata” (aparataj, corpuri de iluminat, echipamente) se ofertează separat.
+          Devizul cuprinde doar manopera pentru faza „la rosu” (doze, trasee, cabluri, montaj si echipare tablouri).
+          Materialele si faza „la gata” (aparataj, corpuri de iluminat, echipamente) se oferteaza separat.
         </p>
 
         <div className="mt-4 grid max-w-md grid-cols-3 gap-3 print:hidden">
-          <Field label="Deplasări">
+          <Field label="Deplasari">
             <NumberInput value={project.trips} onChange={(v) => update((p) => ({ ...p, trips: Math.max(0, Math.round(v ?? 0)) }))} />
           </Field>
           <Field label="Discount %">
@@ -123,7 +123,7 @@ export function QuoteTab({
         </div>
       </Card>
 
-      <Card title="Plan de execuție">
+      <Card title="Plan de executie">
         <ol className="flex flex-col gap-3">
           {plan.map((s) => (
             <li key={s.stage} className="rounded-lg border border-slate-200 p-3">
@@ -132,7 +132,7 @@ export function QuoteTab({
                 <span className="text-sm text-slate-600">
                   {s.minutes > 0 ? `~${hours(s.minutes)}` : ""}
                   {s.missingTime > 0 && (
-                    <span className="ml-2 text-amber-700">{s.missingTime} op. fără timp standard</span>
+                    <span className="ml-2 text-amber-700">{s.missingTime} op. fara timp standard</span>
                   )}
                 </span>
               </div>
@@ -147,12 +147,12 @@ export function QuoteTab({
           ))}
         </ol>
         <p className="mt-3 text-sm text-slate-700">
-          Durată estimată totală: <strong>{q.totalMinutes > 0 ? hours(q.totalMinutes) : "—"}</strong>{" "}
-          <span className="text-xs text-slate-500">(din timpii standard setați; de calibrat pe lucrările reale)</span>
+          Durata estimata totala: <strong>{q.totalMinutes > 0 ? hours(q.totalMinutes) : "—"}</strong>{" "}
+          <span className="text-xs text-slate-500">(din timpii standard setati; de calibrat pe lucrarile reale)</span>
         </p>
         {open.length > 0 && (
           <p className="mt-2 text-sm text-amber-800 print:hidden">
-            {open.length} verificări deschise înainte de execuție — vezi tab-ul Verificări.
+            {open.length} verificari deschise inainte de executie — vezi tab-ul Verificari.
           </p>
         )}
       </Card>

@@ -20,16 +20,16 @@ const LEVEL_KINDS: { value: LevelKind; label: string }[] = [
   { value: "subsol", label: "Subsol" },
   { value: "parter", label: "Parter" },
   { value: "etaj", label: "Etaj" },
-  { value: "mansarda", label: "Mansardă" },
-  { value: "anexa", label: "Anexă (garaj, foișor…)" },
+  { value: "mansarda", label: "Mansarda" },
+  { value: "anexa", label: "Anexa (garaj, foisor…)" },
 ];
 
 const SHORT: Record<string, string> = {
   priza: "Prize",
-  intrerupator: "Întrer.",
+  intrerupator: "Intrer.",
   iluminat: "Ilum.",
   dedicat: "Dedicat",
-  jonctiune: "Legătură",
+  jonctiune: "Legatura",
 };
 
 export function LevelsTab({
@@ -59,7 +59,7 @@ export function LevelsTab({
           <Stat
             label="Trasee (m)"
             value={num(inv.routeM.total)}
-            note={inv.routeM.estimated > 0 ? `${num(inv.routeM.estimated)} m estimați` : "toți măsurați"}
+            note={inv.routeM.estimated > 0 ? `${num(inv.routeM.estimated)} m estimati` : "toti masurati"}
           />
         </div>
       </Card>
@@ -102,11 +102,11 @@ export function LevelsTab({
               <Button
                 variant="danger"
                 onClick={() => {
-                  if (confirm(`Ștergi nivelul „${lvl.name}" cu toate încăperile?`))
+                  if (confirm(`Stergi nivelul „${lvl.name}" cu toate incaperile?`))
                     update((p) => ({ ...p, levels: p.levels.filter((l) => l.id !== lvl.id) }));
                 }}
               >
-                Șterge nivel
+                Sterge nivel
               </Button>
             }
           >
@@ -114,7 +114,7 @@ export function LevelsTab({
               <table className="w-full min-w-[860px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                    <th className="py-2 pr-2">Încăpere</th>
+                    <th className="py-2 pr-2">Incapere</th>
                     {POINT_KINDS.map((k) => (
                       <th key={k} className="w-20 px-1 py-2" title={POINT_LABELS[k]}>
                         {SHORT[k]}
@@ -122,7 +122,7 @@ export function LevelsTab({
                     ))}
                     <th className="w-20 px-1 py-2">LED (m)</th>
                     <th className="w-24 px-1 py-2">Traseu (m)</th>
-                    <th className="w-28 px-1 py-2">Sursă</th>
+                    <th className="w-28 px-1 py-2">Sursa</th>
                     <th className="w-16 px-1 py-2 text-right">Doze</th>
                     <th className="w-10" />
                   </tr>
@@ -156,7 +156,7 @@ export function LevelsTab({
                         ))}
                         <td className="px-1 py-1.5">
                           <NumberInput
-                            ariaLabel={`Bandă LED ${room.name}`}
+                            ariaLabel={`Banda LED ${room.name}`}
                             value={room.ledStripM || null}
                             placeholder="0"
                             step={0.5}
@@ -182,7 +182,7 @@ export function LevelsTab({
                             <Select
                               value={room.routeM!.source}
                               options={[
-                                { value: "masurat", label: "Măsurat" },
+                                { value: "masurat", label: "Masurat" },
                                 { value: "estimat", label: "Estimat" },
                               ]}
                               onChange={(v) =>
@@ -199,7 +199,7 @@ export function LevelsTab({
                         <td className="py-1.5 text-right">
                           <Button
                             variant="danger"
-                            title="Șterge încăperea"
+                            title="Sterge incaperea"
                             onClick={() =>
                               setLevel(lvl.id, (l) => ({ ...l, rooms: l.rooms.filter((r) => r.id !== room.id) }))
                             }
@@ -217,10 +217,10 @@ export function LevelsTab({
               <Button
                 variant="secondary"
                 onClick={() =>
-                  setLevel(lvl.id, (l) => ({ ...l, rooms: [...l.rooms, newRoom(`Încăpere ${l.rooms.length + 1}`)] }))
+                  setLevel(lvl.id, (l) => ({ ...l, rooms: [...l.rooms, newRoom(`Incapere ${l.rooms.length + 1}`)] }))
                 }
               >
-                + Încăpere
+                + Incapere
               </Button>
             </div>
           </Card>
@@ -239,8 +239,8 @@ export function LevelsTab({
         ))}
       </div>
       <p className="text-xs text-slate-500">
-        Traseul lăsat gol se estimează automat: număr de doze × {num(pricing.defaultRouteMPerPoint)} m (setabil în
-        Tarife). Valorile estimate sunt marcate ca atare în deviz.
+        Traseul lasat gol se estimeaza automat: numar de doze × {num(pricing.defaultRouteMPerPoint)} m (setabil in
+        Tarife). Valorile estimate sunt marcate ca atare in deviz.
       </p>
     </div>
   );

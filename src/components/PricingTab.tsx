@@ -15,12 +15,12 @@ export function PricingTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <Card title="Setări generale">
+      <Card title="Setari generale">
         <div className="grid max-w-xl gap-3 sm:grid-cols-2">
-          <Field label="Tarif orar (lei/oră, fără TVA)" hint="Folosit doar unde nu e setat tarif unitar">
+          <Field label="Tarif orar (lei/ora, fara TVA)" hint="Folosit doar unde nu e setat tarif unitar">
             <NumberInput value={pricing.hourlyRate ?? null} placeholder="nesetat" onChange={(v) => setPricing((s) => ({ ...s, hourlyRate: v }))} />
           </Field>
-          <Field label="Traseu estimat per doză (m)" hint="Când traseul încăperii nu e introdus">
+          <Field label="Traseu estimat per doza (m)" hint="Cand traseul incaperii nu e introdus">
             <NumberInput
               value={pricing.defaultRouteMPerPoint}
               step={0.5}
@@ -30,19 +30,19 @@ export function PricingTab({
         </div>
       </Card>
 
-      <Card title="Catalog operațiuni de manoperă">
+      <Card title="Catalog operatiuni de manopera">
         <p className="mb-3 text-sm text-slate-600">
-          Tarifele și timpii sunt ai tăi: aplicația nu propune valori. Tariful unitar are prioritate; dacă lipsește, se
-          folosește timp standard × tarif orar. Cantitățile vin automat din proiect. Setările se salvează în acest browser
-          și se aplică tuturor proiectelor.
+          Tarifele si timpii sunt ai tai: aplicatia nu propune valori. Tariful unitar are prioritate; daca lipseste, se
+          foloseste timp standard × tarif orar. Cantitatile vin automat din proiect. Setarile se salveaza in acest browser
+          si se aplica tuturor proiectelor.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="w-10 py-2">Activ</th>
-                <th className="py-2">Operațiune</th>
-                <th className="py-2">Etapă</th>
+                <th className="py-2">Operatiune</th>
+                <th className="py-2">Etapa</th>
                 <th className="w-16 py-2">UM</th>
                 <th className="w-32 px-1 py-2">Tarif (lei/UM)</th>
                 <th className="w-32 px-1 py-2">Timp (min/UM)</th>

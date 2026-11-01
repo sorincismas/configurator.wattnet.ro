@@ -18,7 +18,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "niveluri", label: "Niveluri & doze" },
   { id: "tablouri", label: "Tablouri" },
   { id: "deviz", label: "Deviz & plan" },
-  { id: "verificari", label: "Verificări" },
+  { id: "verificari", label: "Verificari" },
   { id: "tarife", label: "Tarife" },
 ];
 
@@ -28,7 +28,7 @@ export function Configurator() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (!ws.loaded) {
-    return <div className="p-8 text-slate-500">Se încarcă…</div>;
+    return <div className="p-8 text-slate-500">Se incarca…</div>;
   }
 
   const project = ws.projects.find((p) => p.id === ws.currentId) ?? ws.projects[0];
@@ -55,7 +55,7 @@ export function Configurator() {
       if (!p || p.schemaVersion !== 1 || !Array.isArray(p.levels)) throw new Error("format");
       add({ ...p, id: uid(), updatedAt: new Date().toISOString() });
     } catch {
-      alert("Fișierul nu este un proiect WATTNET valid.");
+      alert("Fisierul nu este un proiect WATTNET valid.");
     }
   };
 
@@ -69,7 +69,7 @@ export function Configurator() {
             </div>
             <div>
               <div className="font-bold tracking-wide">WATTNET · Configurator</div>
-              <div className="text-xs text-slate-400">Faza 1 — lucrări „la roșu”</div>
+              <div className="text-xs text-slate-400">Faza 1 — lucrari „la rosu”</div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -101,7 +101,7 @@ export function Configurator() {
                     })
                   }
                 >
-                  Duplică
+                  Duplica
                 </HeaderBtn>
                 <HeaderBtn onClick={exportJson}>Export JSON</HeaderBtn>
               </>
@@ -122,12 +122,12 @@ export function Configurator() {
               <HeaderBtn
                 danger
                 onClick={() => {
-                  if (!confirm(`Ștergi proiectul „${project.name}"? Acțiunea nu poate fi anulată.`)) return;
+                  if (!confirm(`Stergi proiectul „${project.name}"? Actiunea nu poate fi anulata.`)) return;
                   ws.setProjects((list) => list.filter((p) => p.id !== project.id));
                   ws.setCurrentId(null);
                 }}
               >
-                Șterge
+                Sterge
               </HeaderBtn>
             )}
           </div>
@@ -190,10 +190,10 @@ function Summary({ project, ws }: { project: Project; ws: ReturnType<typeof useW
         <Kpi label="Doze" value={String(q.inventory.pointsTotal)} />
         <Kpi label="Trasee" value={`${Math.round(q.inventory.routeM.total)} m`} />
         <Kpi label="Tablouri" value={`${q.inventory.panels} (${q.inventory.deviceModules} mod.)`} />
-        <Kpi label="Manoperă fără TVA" value={q.complete ? lei(q.netTotal) : `${lei(q.netTotal)} *`} />
+        <Kpi label="Manopera fara TVA" value={q.complete ? lei(q.netTotal) : `${lei(q.netTotal)} *`} />
         <Kpi
-          label="Verificări"
-          value={bad ? `${bad} neconforme` : open ? `${open} deschise` : "fără probleme"}
+          label="Verificari"
+          value={bad ? `${bad} neconforme` : open ? `${open} deschise` : "fara probleme"}
           tone={bad ? "bad" : open ? "warn" : "ok"}
         />
       </div>
@@ -227,10 +227,10 @@ function HeaderBtn({ children, onClick, danger }: { children: React.ReactNode; o
 function Empty({ onNew, onDemo }: { onNew: () => void; onDemo: () => void }) {
   return (
     <div className="mx-auto max-w-xl px-4 py-16 text-center">
-      <h1 className="text-2xl font-bold text-slate-900">Configurator instalații — faza „la roșu”</h1>
+      <h1 className="text-2xl font-bold text-slate-900">Configurator instalatii — faza „la rosu”</h1>
       <p className="mt-3 text-slate-600">
-        Introduci nivelurile, încăperile și dozele din planuri, configurezi tablourile (inclusiv în cascadă) și obții
-        devizul de manoperă și planul de execuție din aceeași configurație.
+        Introduci nivelurile, incaperile si dozele din planuri, configurezi tablourile (inclusiv in cascada) si obtii
+        devizul de manopera si planul de executie din aceeasi configuratie.
       </p>
       <div className="mt-6 flex justify-center gap-3">
         <Button onClick={onNew}>Proiect nou</Button>

@@ -3,12 +3,12 @@ import { findCascadeCycle, layoutPanel } from "./panel";
 import type { CheckResult, PricingSettings, Project } from "./types";
 
 /**
- * Verificări de consistență pentru faza 1.
+ * Verificari de consistenta pentru faza 1.
  *
- * IMPORTANT: acestea NU sunt verificări de conformitate cu normativul I7.
- * Regulile normative se adaugă doar cu referință exactă (articol/tabel),
- * teste și validare de către electricianul autorizat. O listă fără
- * neconformități nu înseamnă că instalația este conformă.
+ * IMPORTANT: acestea NU sunt verificari de conformitate cu normativul I7.
+ * Regulile normative se adauga doar cu referinta exacta (articol/tabel),
+ * teste si validare de catre electricianul autorizat. O lista fara
+ * neconformitati nu inseamna ca instalatia este conforma.
  */
 export function runChecks(project: Project, settings: PricingSettings): CheckResult[] {
   const out: CheckResult[] = [];
@@ -21,15 +21,15 @@ export function runChecks(project: Project, settings: PricingSettings): CheckRes
           id: "supply",
           ruleId: "DATE-001",
           status: "nedeterminat",
-          title: "Tipul alimentării",
-          message: "Tipul alimentării (monofazat/trifazat) nu este cunoscut. Se stabilește înainte de echiparea tablourilor.",
+          title: "Tipul alimentarii",
+          message: "Tipul alimentarii (monofazat/trifazat) nu este cunoscut. Se stabileste inainte de echiparea tablourilor.",
         }
       : {
           id: "supply",
           ruleId: "DATE-001",
           status: "conform",
-          title: "Tipul alimentării",
-          message: `Alimentare declarată: ${project.supply}.`,
+          title: "Tipul alimentarii",
+          message: `Alimentare declarata: ${project.supply}.`,
         },
   );
 
@@ -40,7 +40,7 @@ export function runChecks(project: Project, settings: PricingSettings): CheckRes
       ruleId: "DATE-002",
       status: "nedeterminat",
       title: "Inventar puncte",
-      message: "Nu există doze introduse. Adaugă nivelurile, încăperile și dozele din planuri.",
+      message: "Nu exista doze introduse. Adauga nivelurile, incaperile si dozele din planuri.",
     });
   }
 
@@ -51,7 +51,7 @@ export function runChecks(project: Project, settings: PricingSettings): CheckRes
       ruleId: "DEVIZ-001",
       status: "nedeterminat",
       title: "Lungimi trasee",
-      message: `${fmt(inv.routeM.estimated)} m din ${fmt(inv.routeM.total)} m de traseu sunt estimați, nu măsurați. Devizul folosește estimarea.`,
+      message: `${fmt(inv.routeM.estimated)} m din ${fmt(inv.routeM.total)} m de traseu sunt estimati, nu masurati. Devizul foloseste estimarea.`,
     });
   }
 
@@ -73,8 +73,8 @@ export function runChecks(project: Project, settings: PricingSettings): CheckRes
       id: "cascade-cycle",
       ruleId: "TAB-001",
       status: "neconform",
-      title: "Alimentare în cascadă",
-      message: `Buclă de alimentare între tablourile: ${names.join(" → ")}. Un tablou nu poate fi alimentat (indirect) din el însuși.`,
+      title: "Alimentare in cascada",
+      message: `Bucla de alimentare intre tablourile: ${names.join(" → ")}. Un tablou nu poate fi alimentat (indirect) din el insusi.`,
     });
   }
 
@@ -87,7 +87,7 @@ export function runChecks(project: Project, settings: PricingSettings): CheckRes
         status: "nedeterminat",
         title: `Capacitate ${p.name}`,
         target: p.id,
-        message: "Numărul de rânduri sau de module pe rând nu este definit.",
+        message: "Numarul de randuri sau de module pe rand nu este definit.",
       });
     } else {
       const over = lay.rows.filter((r) => r.overflow);
@@ -99,8 +99,8 @@ export function runChecks(project: Project, settings: PricingSettings): CheckRes
         target: p.id,
         message: lay.overflow
           ? [
-              over.length ? `Rânduri depășite: ${over.map((r) => `șina ${r.row + 1} (${r.used}/${r.capacity} module)`).join(", ")}.` : "",
-              lay.orphanDevices.length ? `${lay.orphanDevices.length} aparat(e) pe rânduri inexistente.` : "",
+              over.length ? `Randuri depasite: ${over.map((r) => `sina ${r.row + 1} (${r.used}/${r.capacity} module)`).join(", ")}.` : "",
+              lay.orphanDevices.length ? `${lay.orphanDevices.length} aparat(e) pe randuri inexistente.` : "",
             ].filter(Boolean).join(" ")
           : `${lay.used}/${lay.capacity} module ocupate, ${lay.free} libere.`,
       });
@@ -113,7 +113,7 @@ export function runChecks(project: Project, settings: PricingSettings): CheckRes
         status: "nedeterminat",
         title: `Alimentare ${p.name}`,
         target: p.id,
-        message: "Lungimea cablului de alimentare din tabloul părinte nu este introdusă; nu intră în deviz.",
+        message: "Lungimea cablului de alimentare din tabloul parinte nu este introdusa; nu intra in deviz.",
       });
     }
 
@@ -122,9 +122,9 @@ export function runChecks(project: Project, settings: PricingSettings): CheckRes
         id: `rcd-${p.id}`,
         ruleId: "TAB-004",
         status: "nedeterminat",
-        title: `Protecție diferențială ${p.name}`,
+        title: `Protectie diferentiala ${p.name}`,
         target: p.id,
-        message: "Tabloul nu conține niciun aparat diferențial (RCD/RCBO). Verifică cerințele de protecție diferențială aplicabile circuitelor.",
+        message: "Tabloul nu contine niciun aparat diferential (RCD/RCBO). Verifica cerintele de protectie diferentiala aplicabile circuitelor.",
       });
     }
 
@@ -138,7 +138,7 @@ export function runChecks(project: Project, settings: PricingSettings): CheckRes
         status: "nedeterminat",
         title: `Caracteristici aparate ${p.name}`,
         target: p.id,
-        message: `${unrated.length} aparat(e) de protecție fără caracteristici nominale: ${unrated.map((d) => d.label || d.kind).join(", ")}.`,
+        message: `${unrated.length} aparat(e) de protectie fara caracteristici nominale: ${unrated.map((d) => d.label || d.kind).join(", ")}.`,
       });
     }
   }

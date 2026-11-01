@@ -39,7 +39,7 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
         const lay = layoutPanel(panel);
         const depth = cascadeDepth(panel, project.panels);
         const parentOptions = [
-          { value: "", label: "— principal (alimentat din rețea) —" },
+          { value: "", label: "— principal (alimentat din retea) —" },
           ...project.panels
             .filter((p) => p.id !== panel.id)
             .map((p) => ({ value: p.id, label: `din ${p.name}` })),
@@ -61,7 +61,7 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
               <Button
                 variant="danger"
                 onClick={() => {
-                  if (!confirm(`Ștergi „${panel.name}"? Tablourile alimentate din el devin principale.`)) return;
+                  if (!confirm(`Stergi „${panel.name}"? Tablourile alimentate din el devin principale.`)) return;
                   update((p) => ({
                     ...p,
                     panels: p.panels
@@ -71,7 +71,7 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
                   }));
                 }}
               >
-                Șterge tablou
+                Sterge tablou
               </Button>
             }
           >
@@ -86,14 +86,14 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
                   onChange={(v) => setPanel(panel.id, (p) => ({ ...p, parentPanelId: v || undefined }))}
                 />
               </Field>
-              <Field label="Rânduri (șine DIN)">
+              <Field label="Randuri (sine DIN)">
                 <NumberInput
                   value={panel.rows}
                   min={1}
                   onChange={(v) => setPanel(panel.id, (p) => ({ ...p, rows: Math.max(1, Math.round(v ?? 1)) }))}
                 />
               </Field>
-              <Field label="Module / rând">
+              <Field label="Module / rand">
                 <NumberInput
                   value={panel.modulesPerRow}
                   min={1}
@@ -103,12 +103,12 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
                 />
               </Field>
               {panel.parentPanelId && (
-                <Field label="Cablu alimentare (m)" hint="Din tabloul părinte">
+                <Field label="Cablu alimentare (m)" hint="Din tabloul parinte">
                   <div className="flex gap-1">
                     <NumberInput
                       value={panel.feederM?.value ?? null}
                       step={0.5}
-                      placeholder="lipsă"
+                      placeholder="lipsa"
                       onChange={(v) =>
                         setPanel(panel.id, (p) => ({
                           ...p,
@@ -122,7 +122,7 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
                         className="w-28"
                         options={[
                           { value: "estimat", label: "Estimat" },
-                          { value: "masurat", label: "Măsurat" },
+                          { value: "masurat", label: "Masurat" },
                         ]}
                         onChange={(v) =>
                           setPanel(panel.id, (p) => ({ ...p, feederM: { ...p.feederM!, source: v } }))
@@ -144,11 +144,11 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
                   <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                     <th className="w-8 py-2">#</th>
                     <th className="w-56 px-1 py-2">Aparat</th>
-                    <th className="px-1 py-2">Circuit / funcție</th>
+                    <th className="px-1 py-2">Circuit / functie</th>
                     <th className="w-36 px-1 py-2">Caracteristici</th>
                     <th className="w-16 px-1 py-2">Poli</th>
                     <th className="w-16 px-1 py-2">Module</th>
-                    <th className="w-16 px-1 py-2">Șina</th>
+                    <th className="w-16 px-1 py-2">Sina</th>
                     <th className="w-28" />
                   </tr>
                 </thead>
@@ -162,7 +162,7 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
                       <td className="px-1 py-1.5">
                         <TextInput
                           value={d.label}
-                          placeholder="ex. Prize bucătărie"
+                          placeholder="ex. Prize bucatarie"
                           onChange={(v) => setDevice(panel.id, d.id, (x) => ({ ...x, label: v }))}
                         />
                       </td>
@@ -199,15 +199,15 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
                         />
                       </td>
                       <td className="py-1.5 text-right whitespace-nowrap">
-                        <Button variant="ghost" title="Mută stânga" onClick={() => moveDevice(panel.id, idx, -1)}>
+                        <Button variant="ghost" title="Muta stanga" onClick={() => moveDevice(panel.id, idx, -1)}>
                           ↑
                         </Button>
-                        <Button variant="ghost" title="Mută dreapta" onClick={() => moveDevice(panel.id, idx, 1)}>
+                        <Button variant="ghost" title="Muta dreapta" onClick={() => moveDevice(panel.id, idx, 1)}>
                           ↓
                         </Button>
                         <Button
                           variant="danger"
-                          title="Șterge aparatul"
+                          title="Sterge aparatul"
                           onClick={() => setPanel(panel.id, (p) => ({ ...p, devices: p.devices.filter((x) => x.id !== d.id) }))}
                         >
                           ✕
@@ -223,7 +223,7 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
                 [
                   ["MCB", "+ Disjunctor 1P", { kind: "MCB", poles: 1, modules: 1 }],
                   ["MCB2", "+ Disjunctor 2P", { kind: "MCB", poles: 2, modules: 2 }],
-                  ["RCD", "+ Diferențial", { kind: "RCD", poles: 2, modules: 2 }],
+                  ["RCD", "+ Diferential", { kind: "RCD", poles: 2, modules: 2 }],
                   ["RCBO", "+ RCBO", { kind: "RCBO", poles: 2, modules: 2 }],
                   ["SPD", "+ SPD", { kind: "SPD", poles: 2, modules: 2 }],
                   ["SEP", "+ Separator", { kind: "separator", poles: 2, modules: 2 }],
@@ -244,7 +244,7 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
               ))}
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Lățimea în module și caracteristicile nominale se introduc după fișa tehnică a produsului ales. Aplicația
+              Latimea in module si caracteristicile nominale se introduc dupa fisa tehnica a produsului ales. Aplicatia
               nu le deduce automat.
             </p>
           </Card>
@@ -264,7 +264,7 @@ export function PanelsTab({ project, update }: { project: Project; update: (fn: 
             }))
           }
         >
-          + Tablou {project.panels.length ? "secundar (cascadă)" : "principal"}
+          + Tablou {project.panels.length ? "secundar (cascada)" : "principal"}
         </Button>
       </div>
     </div>

@@ -29,21 +29,21 @@ function simpleProject(): Project {
 }
 
 describe("inventar", () => {
-  it("însumează dozele și estimează traseele nemăsurate", () => {
+  it("insumeaza dozele si estimeaza traseele nemasurate", () => {
     const p = simpleProject();
     const inv = computeInventory(p, 5);
     expect(inv.pointsTotal).toBe(8);
     expect(inv.routeM).toEqual({ total: 40, measured: 0, estimated: 40 });
   });
 
-  it("folosește traseul măsurat când există", () => {
+  it("foloseste traseul masurat cand exista", () => {
     const p = simpleProject();
     p.levels[0].rooms[0].routeM = { value: 33, source: "masurat" };
     const inv = computeInventory(p, 5);
     expect(inv.routeM).toEqual({ total: 33, measured: 33, estimated: 0 });
   });
 
-  it("ignoră valorile invalide", () => {
+  it("ignora valorile invalide", () => {
     const p = simpleProject();
     p.levels[0].rooms[0].points.priza = -3;
     p.levels[0].rooms[0].points.iluminat = Number.NaN;
@@ -52,7 +52,7 @@ describe("inventar", () => {
 });
 
 describe("tablou", () => {
-  it("calculează ocuparea pe șine și semnalează depășirea", () => {
+  it("calculeaza ocuparea pe sine si semnaleaza depasirea", () => {
     const panel = newPanel();
     panel.rows = 1;
     panel.modulesPerRow = 4;
@@ -63,7 +63,7 @@ describe("tablou", () => {
     expect(lay.rows[0].placed.map((x) => x.start)).toEqual([0, 2, 4]);
   });
 
-  it("raportează aparatele de pe rânduri inexistente", () => {
+  it("raporteaza aparatele de pe randuri inexistente", () => {
     const panel = newPanel();
     panel.rows = 1;
     panel.devices = [newDevice({ row: 3 })];
@@ -72,7 +72,7 @@ describe("tablou", () => {
     expect(lay.overflow).toBe(true);
   });
 
-  it("detectează buclele de alimentare în cascadă", () => {
+  it("detecteaza buclele de alimentare in cascada", () => {
     const a = newPanel("A");
     const b = newPanel("B", a.id);
     expect(findCascadeCycle([a, b])).toBeNull();
@@ -88,14 +88,14 @@ describe("deviz", () => {
     return s;
   };
 
-  it("nu inventează prețuri: fără tarife devizul este incomplet", () => {
+  it("nu inventeaza preturi: fara tarife devizul este incomplet", () => {
     const q = computeQuote(simpleProject(), defaultPricing());
     expect(q.complete).toBe(false);
     expect(q.laborSubtotal).toBe(0);
     expect(q.unpricedLines.length).toBeGreaterThan(0);
   });
 
-  it("calculează cantitate × tarif, discount și TVA", () => {
+  it("calculeaza cantitate × tarif, discount si TVA", () => {
     const p = simpleProject();
     p.trips = 0;
     p.panels = [];
@@ -104,7 +104,7 @@ describe("deviz", () => {
     const s = priced();
     s.defaultRouteMPerPoint = 1; // 8 m
     const q = computeQuote(p, s);
-    // trasare 8 + doze 4+2+2 + șlițuire 8 + pozare 8 = 32 unități × 10 lei
+    // trasare 8 + doze 4+2+2 + slituire 8 + pozare 8 = 32 unitati × 10 lei
     expect(q.laborSubtotal).toBe(320);
     expect(q.discount).toBe(32);
     expect(q.netTotal).toBe(288);
@@ -113,7 +113,7 @@ describe("deviz", () => {
     expect(q.complete).toBe(true);
   });
 
-  it("folosește timp standard × tarif orar când nu există tarif unitar", () => {
+  it("foloseste timp standard × tarif orar cand nu exista tarif unitar", () => {
     const p = simpleProject();
     p.trips = 0;
     p.panels = [];
@@ -130,13 +130,13 @@ describe("deviz", () => {
     expect(q.totalMinutes).toBe(60);
   });
 
-  it("marchează cantitățile estimate", () => {
+  it("marcheaza cantitatile estimate", () => {
     const q = computeQuote(simpleProject(), priced());
     const pozare = q.lines.find((l) => l.operationId === "pozare")!;
     expect(pozare.estimatedQuantity).toBe(pozare.quantity);
   });
 
-  it("planul de execuție respectă ordinea etapelor", () => {
+  it("planul de executie respecta ordinea etapelor", () => {
     const q = computeQuote(demoProject(), priced());
     const stages = executionPlan(q).map((s) => s.stage);
     expect(stages[0]).toBe("trasare");
@@ -145,20 +145,20 @@ describe("deviz", () => {
   });
 });
 
-describe("verificări", () => {
-  it("nu declară nimic conform fără date", () => {
+describe("verificari", () => {
+  it("nu declara nimic conform fara date", () => {
     const res = runChecks(newProject(), defaultPricing());
     expect(res.find((r) => r.ruleId === "DATE-001")?.status).toBe("nedeterminat");
     expect(res.find((r) => r.ruleId === "DATE-002")?.status).toBe("nedeterminat");
   });
 
-  it("semnalează tabloul secundar fără lungime de alimentare", () => {
+  it("semnaleaza tabloul secundar fara lungime de alimentare", () => {
     const res = runChecks(demoProject(), defaultPricing());
     const feeder = res.filter((r) => r.ruleId === "TAB-003");
     expect(feeder).toHaveLength(1); // tabloul garaj
   });
 
-  it("proiectul demonstrativ nu depășește capacitatea tablourilor", () => {
+  it("proiectul demonstrativ nu depaseste capacitatea tablourilor", () => {
     const res = runChecks(demoProject(), defaultPricing());
     expect(res.filter((r) => r.ruleId === "TAB-002").every((r) => r.status === "conform")).toBe(true);
   });

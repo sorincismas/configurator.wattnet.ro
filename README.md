@@ -1,43 +1,43 @@
-# WATTNET · Configurator instalații electrice
+# WATTNET · Configurator instalatii electrice
 
-Aplicație Next.js + TypeScript pentru ofertarea și planificarea lucrărilor electrice WATTNET.
+Aplicatie Next.js + TypeScript pentru ofertarea si planificarea lucrarilor electrice WATTNET.
 Repo separat de site-ul static `wattnet.ro`, publicat ca proiect Vercel separat.
 
-## Faza 1 — lucrări „la roșu” (ce face acum)
+## Faza 1 — lucrari „la rosu” (ce face acum)
 
-- **Proiect și beneficiar**: cod, tip clădire, alimentare, date client.
-- **Niveluri și doze**: subsol / parter / etaj / mansardă / anexe (garaj, foișor) → încăperi →
-  doze de prize, întrerupătoare, iluminat, consumatori dedicați și doze de legătură, bandă LED și
-  lungimea traseelor. Traseul nemăsurat se estimează automat și e marcat ca **estimare**.
-- **Tablouri în cascadă**: tablou principal plus tablouri secundare alimentate din alt tablou,
-  aparate pe șine DIN, ocuparea în module, desen SVG orientativ și lungimea cablului de alimentare.
-- **Deviz de manoperă**: cantitățile vin din configurație, iar tarifele din catalogul tău
-  (tarif unitar sau timp standard × tarif orar). Discount, TVA, tipărire/PDF din browser.
-- **Plan de execuție**: etapele în ordinea lucrului, cu durate estimate din timpii standard.
-- **Verificări**: rezultat conform / neconform / nedeterminat pentru consistența datelor.
+- **Proiect si beneficiar**: cod, tip cladire, alimentare, date client.
+- **Niveluri si doze**: subsol / parter / etaj / mansarda / anexe (garaj, foisor) → incaperi →
+  doze de prize, intrerupatoare, iluminat, consumatori dedicati si doze de legatura, banda LED si
+  lungimea traseelor. Traseul nemasurat se estimeaza automat si e marcat ca **estimare**.
+- **Tablouri in cascada**: tablou principal plus tablouri secundare alimentate din alt tablou,
+  aparate pe sine DIN, ocuparea in module, desen SVG orientativ si lungimea cablului de alimentare.
+- **Deviz de manopera**: cantitatile vin din configuratie, iar tarifele din catalogul tau
+  (tarif unitar sau timp standard × tarif orar). Discount, TVA, tiparire/PDF din browser.
+- **Plan de executie**: etapele in ordinea lucrului, cu durate estimate din timpii standard.
+- **Verificari**: rezultat conform / neconform / nedeterminat pentru consistenta datelor.
 
-### Ce NU face (intenționat)
+### Ce NU face (intentionat)
 
-- Nu propune tarife sau timpi: catalogul pornește gol și îl completezi tu.
-- Nu dimensionează protecții sau secțiuni și nu declară conformitatea cu **I7-2011**.
-  Regulile normative se adaugă una câte una în `src/lib/engine/checks.ts`, fiecare cu referință
-  exactă (articol/tabel), teste și validare de către electricianul autorizat.
-- Datele stau în **browserul curent** (localStorage). Folosește *Export JSON* pentru copii de siguranță.
-  Baza de date (Supabase) și autentificarea vin într-o etapă ulterioară.
+- Nu propune tarife sau timpi: catalogul porneste gol si il completezi tu.
+- Nu dimensioneaza protectii sau sectiuni si nu declara conformitatea cu **I7-2011**.
+  Regulile normative se adauga una cate una in `src/lib/engine/checks.ts`, fiecare cu referinta
+  exacta (articol/tabel), teste si validare de catre electricianul autorizat.
+- Datele stau in **browserul curent** (localStorage). Foloseste *Export JSON* pentru copii de siguranta.
+  Baza de date (Supabase) si autentificarea vin intr-o etapa ulterioara.
 
-## Structură
+## Structura
 
 ```
 src/
-  lib/engine/      ← motorul de calcul, fără React (testat separat)
+  lib/engine/      ← motorul de calcul, fara React (testat separat)
     types.ts       ← modelul de date
-    inventory.ts   ← inventar doze / trasee (măsurat vs. estimat)
-    panel.ts       ← ocupare DIN, cascadă tablouri
-    pricing.ts     ← deviz + plan de execuție
-    checks.ts      ← verificări (conform / neconform / nedeterminat)
-    defaults.ts    ← proiect nou, catalog operațiuni, proiect exemplu
-  lib/store.ts     ← salvare locală
-  components/      ← interfața (tab-uri)
+    inventory.ts   ← inventar doze / trasee (masurat vs. estimat)
+    panel.ts       ← ocupare DIN, cascada tablouri
+    pricing.ts     ← deviz + plan de executie
+    checks.ts      ← verificari (conform / neconform / nedeterminat)
+    defaults.ts    ← proiect nou, catalog operatiuni, proiect exemplu
+  lib/store.ts     ← salvare locala
+  components/      ← interfata (tab-uri)
 tests/             ← teste Vitest pentru motor
 ```
 
@@ -47,23 +47,23 @@ tests/             ← teste Vitest pentru motor
 npm install
 npm run dev      # http://localhost:3000
 npm test         # testele motorului
-npm run build    # verificare înainte de push
+npm run build    # verificare inainte de push
 ```
 
 ## Publicare pe Vercel
 
-1. Vercel → **Add New… → Project** → importă repo-ul `wattnet-configurator`.
-2. Framework: Next.js (detectat automat), fără variabile de mediu.
-3. Opțional: domeniu `configurator.wattnet.ro` (Settings → Domains).
+1. Vercel → **Add New… → Project** → importa repo-ul `configurator.wattnet.ro`.
+2. Framework: Next.js (detectat automat), fara variabile de mediu.
+3. Optional: domeniu `configurator.wattnet.ro` (Settings → Domains).
 
-Notă: planul Vercel Hobby este destinat utilizării necomerciale. Verifică termenii înainte de
-folosirea în activitatea firmei.
+Nota: planul Vercel Hobby este destinat utilizarii necomerciale. Verifica termenii inainte de
+folosirea in activitatea firmei.
 
-## Pașii următori
+## Pasii urmatori
 
 1. Faza 2 „la gata”: aparataj, corpuri de iluminat, echipamente.
-2. Circuite: asocierea dozelor cu circuitele și cu aparatele din tablou.
-3. Schema monofilară generată din aceeași configurație.
-4. Materiale (listă de achiziții) separat de manoperă.
+2. Circuite: asocierea dozelor cu circuitele si cu aparatele din tablou.
+3. Schema monofilara generata din aceeasi configuratie.
+4. Materiale (lista de achizitii) separat de manopera.
 5. Supabase: proiecte salvate, autentificare, versiuni ale ofertelor.
-6. Configuratorul public pentru clienți pe wattnet.ro.
+6. Configuratorul public pentru clienti pe wattnet.ro.

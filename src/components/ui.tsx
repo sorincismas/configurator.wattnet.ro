@@ -72,7 +72,7 @@ export function TextInput({
   );
 }
 
-/** Câmp numeric; gol = null (valoare necunoscută), nu 0. */
+/** Camp numeric; gol = null (valoare necunoscuta), nu 0. */
 export function NumberInput({
   value,
   onChange,

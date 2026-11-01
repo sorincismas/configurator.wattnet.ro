@@ -17,9 +17,9 @@ export function ChecksTab({ project, pricing }: { project: Project; pricing: Pri
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-lg border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700">
-        Acestea sunt verificări de <strong>consistență a datelor</strong> (capacitate tablou, date lipsă, estimări). Nu
-        reprezintă verificarea conformității cu normativul I7. Regulile normative se adaugă una câte una, cu referință
-        exactă, teste și validare de către electricianul autorizat.
+        Acestea sunt verificari de <strong>consistenta a datelor</strong> (capacitate tablou, date lipsa, estimari). Nu
+        reprezinta verificarea conformitatii cu normativul I7. Regulile normative se adauga una cate una, cu referinta
+        exacta, teste si validare de catre electricianul autorizat.
       </div>
       <div className="flex gap-2">
         <Badge tone="bad">{count("neconform")} neconforme</Badge>

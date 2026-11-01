@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "WATTNET · Configurator instalații electrice",
-  description: "Inventar doze, tablouri în cascadă, deviz de manoperă și plan de execuție — faza la roșu.",
+  title: "WATTNET · Configurator instalatii electrice",
+  description: "Inventar doze, tablouri in cascada, deviz de manopera si plan de executie — faza la rosu.",
   robots: { index: false, follow: false },
 };
 
