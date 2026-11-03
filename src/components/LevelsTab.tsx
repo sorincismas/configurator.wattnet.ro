@@ -18,6 +18,7 @@ import { Badge, Button, Card, NumberInput, Select, TextInput, num } from "./ui";
 
 const LEVEL_KINDS: { value: LevelKind; label: string }[] = [
   { value: "subsol", label: "Subsol" },
+  { value: "demisol", label: "Demisol" },
   { value: "parter", label: "Parter" },
   { value: "etaj", label: "Etaj" },
   { value: "mansarda", label: "Mansarda" },

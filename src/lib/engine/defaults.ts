@@ -21,6 +21,7 @@ export function newRoom(name = "Incapere noua"): Room {
 export function newLevel(kind: LevelKind = "parter", name?: string): Level {
   const names: Record<LevelKind, string> = {
     subsol: "Subsol",
+    demisol: "Demisol",
     parter: "Parter",
     etaj: "Etaj",
     mansarda: "Mansarda",

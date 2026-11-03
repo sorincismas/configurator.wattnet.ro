@@ -14,7 +14,7 @@ export type MeasuredValue = {
   source: ValueSource;
 };
 
-export type LevelKind = "subsol" | "parter" | "etaj" | "mansarda" | "anexa";
+export type LevelKind = "subsol" | "demisol" | "parter" | "etaj" | "mansarda" | "anexa";
 
 /** Tipurile de doze/puncte din faza „la rosu". */
 export const POINT_KINDS = [

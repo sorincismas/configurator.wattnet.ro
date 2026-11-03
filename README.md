@@ -6,7 +6,7 @@ Repo separat de site-ul static `wattnet.ro`, publicat ca proiect Vercel separat.
 ## Faza 1 — lucrari „la rosu” (ce face acum)
 
 - **Proiect si beneficiar**: cod, tip cladire, alimentare, date client.
-- **Niveluri si doze**: subsol / parter / etaj / mansarda / anexe (garaj, foisor) → incaperi →
+- **Niveluri si doze**: subsol / demisol / parter / etaj / mansarda / anexe (garaj, foisor) → incaperi →
   doze de prize, intrerupatoare, iluminat, consumatori dedicati si doze de legatura, banda LED si
   lungimea traseelor. Traseul nemasurat se estimeaza automat si e marcat ca **estimare**.
 - **Tablouri in cascada**: tablou principal plus tablouri secundare alimentate din alt tablou,
