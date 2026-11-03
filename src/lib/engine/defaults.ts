@@ -1,11 +1,15 @@
+import { addCircuitDevices, deriveCircuits } from "./circuits";
+import { defaultRules } from "./electrical";
 import { emptyPoints } from "./inventory";
 import type {
+  Curve,
   Level,
   LevelKind,
   Panel,
   PanelDevice,
   PricingSettings,
   Project,
+  RcdType,
   Room,
 } from "./types";
 
@@ -146,35 +150,26 @@ export function demoProject(): Project {
 
   const tp = newPanel("Tablou principal");
   tp.rows = 3;
-  tp.devices = [
-    newDevice({ kind: "separator", label: "General", poles: 2, modules: 2, row: 0 }),
-    newDevice({ kind: "SPD", label: "Supratensiuni", poles: 2, modules: 2, row: 0 }),
-    newDevice({ kind: "RCD", label: "Diferential prize", poles: 2, modules: 2, row: 0 }),
-    newDevice({ kind: "MCB", label: "Prize living", row: 0 }),
-    newDevice({ kind: "MCB", label: "Prize bucatarie", row: 0 }),
-    newDevice({ kind: "MCB", label: "Plita", poles: 2, modules: 2, row: 1 }),
-    newDevice({ kind: "MCB", label: "Cuptor", row: 1 }),
-    newDevice({ kind: "MCB", label: "Iluminat parter", row: 1 }),
-    newDevice({ kind: "MCB", label: "Alimentare TE etaj", poles: 2, modules: 2, row: 2 }),
-    newDevice({ kind: "MCB", label: "Alimentare TG garaj", poles: 2, modules: 2, row: 2 }),
-  ];
   const te = newPanel("Tablou etaj", tp.id);
   te.rows = 1;
   te.modulesPerRow = 12;
   te.feederM = { value: 14, source: "estimat" };
-  te.devices = [
-    newDevice({ kind: "RCD", label: "Diferential etaj", poles: 2, modules: 2 }),
-    newDevice({ kind: "MCB", label: "Prize dormitoare" }),
-    newDevice({ kind: "MCB", label: "Iluminat etaj" }),
-    newDevice({ kind: "MCB", label: "Baie etaj" }),
-  ];
   const tg = newPanel("Tablou garaj", tp.id);
   tg.rows = 1;
   tg.modulesPerRow = 8;
-  tg.devices = [
-    newDevice({ kind: "RCBO", label: "Prize garaj", poles: 2, modules: 2 }),
-    newDevice({ kind: "MCB", label: "Iluminat garaj" }),
+
+  tp.devices = [
+    newDevice({ kind: "separator", label: "General", poles: 2, modules: 2, row: 0, ratedA: 40, isMain: true }),
+    newDevice({ kind: "SPD", label: "Supratensiuni", poles: 2, modules: 2, row: 0 }),
+    newDevice({ kind: "RCD", label: "Diferential prize", poles: 2, modules: 2, row: 0, ratedA: 40, sensitivityMa: 30, rcdType: "A" }),
+    newDevice({ kind: "MCB", label: "Alimentare tablou etaj", poles: 2, modules: 2, row: 0, ratedA: 25, curve: "C", feedsPanelId: te.id }),
+    newDevice({ kind: "MCB", label: "Alimentare tablou garaj", poles: 2, modules: 2, row: 0, ratedA: 20, curve: "C", feedsPanelId: tg.id }),
   ];
+  te.devices = [
+    newDevice({ kind: "separator", label: "General etaj", poles: 2, modules: 2, ratedA: 25, isMain: true }),
+    newDevice({ kind: "RCD", label: "Diferential etaj", poles: 2, modules: 2, ratedA: 25, sensitivityMa: 30, rcdType: "A" }),
+  ];
+  tg.devices = [newDevice({ kind: "RCD", label: "Diferential garaj", poles: 2, modules: 2, ratedA: 25, sensitivityMa: 30, rcdType: "A" })];
 
   parter.panelId = tp.id;
   etaj.panelId = te.id;
@@ -182,5 +177,52 @@ export function demoProject(): Project {
   p.levels = [parter, etaj, garaj];
   p.panels = [tp, te, tg];
   p.trips = 4;
+  p.mainBreakerA = 40;
+  p.cosPhi = 1;
+
+  // aparatele de protectie pentru circuitele generate
+  const circuits = deriveCircuits(p, defaultRules(), defaultPricing().defaultRouteMPerPoint);
+  p.panels = p.panels.map((panel) =>
+    addCircuitDevices(panel, circuits.filter((c) => c.panelId === panel.id)),
+  );
   return p;
+}
+
+/* ------------------------------------------------------------------ */
+/* Compatibilitate cu proiectele salvate                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Citeste valorile numerice din textul vechi de caracteristici:
+ * „C16" → curba C, 16 A; „40A 30mA tip A" → 40 A, 30 mA, tip A.
+ */
+export function parseRating(text: string): Pick<PanelDevice, "ratedA" | "curve" | "sensitivityMa" | "rcdType"> {
+  const t = text.trim();
+  const out: Pick<PanelDevice, "ratedA" | "curve" | "sensitivityMa" | "rcdType"> = {};
+  const curve = /\b([BCD])\s*(\d+(?:[.,]\d+)?)\b/i.exec(t);
+  if (curve) {
+    out.curve = curve[1].toUpperCase() as Curve;
+    out.ratedA = Number(curve[2].replace(",", "."));
+  } else {
+    const a = /(\d+(?:[.,]\d+)?)\s*A(?!C)\b/i.exec(t.replace(/\d+\s*mA/gi, ""));
+    if (a) out.ratedA = Number(a[1].replace(",", "."));
+  }
+  const ma = /(\d+)\s*mA/i.exec(t);
+  if (ma) out.sensitivityMa = Number(ma[1]);
+  const type = /tip\s*(AC|A|F|B)\b/i.exec(t);
+  if (type) out.rcdType = type[1].toUpperCase() as RcdType;
+  return out;
+}
+
+/** Completeaza campurile noi (optionale) pentru proiectele salvate cu versiunea anterioara. */
+export function normalizeProject(p: Project): Project {
+  return {
+    ...p,
+    panels: (p.panels ?? []).map((panel) => ({
+      ...panel,
+      devices: (panel.devices ?? []).map((d) =>
+        d.ratedA == null && d.rating?.trim() ? { ...d, ...parseRating(d.rating) } : d,
+      ),
+    })),
+  };
 }

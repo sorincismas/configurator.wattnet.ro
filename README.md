@@ -5,7 +5,8 @@ Repo separat de site-ul static `wattnet.ro`, publicat ca proiect Vercel separat.
 
 ## Faza 1 — lucrari „la rosu” (ce face acum)
 
-- **Proiect si beneficiar**: cod, tip cladire, alimentare, date client.
+- **Proiect si beneficiar**: cod, tip cladire, alimentare, date client, siguranta generala (A) →
+  putere maxima absorbita (mono 230·I·cosφ, tri √3·400·I·cosφ) si putere instalata estimata.
 - **Niveluri si doze**: subsol / demisol / parter / etaj / mansarda / anexe (garaj, foisor) → incaperi →
   doze de prize, intrerupatoare, iluminat, consumatori dedicati si doze de legatura, banda LED si
   lungimea traseelor. Traseul nemasurat se estimeaza automat si e marcat ca **estimare**.
@@ -14,12 +15,23 @@ Repo separat de site-ul static `wattnet.ro`, publicat ca proiect Vercel separat.
 - **Deviz de manopera**: cantitatile vin din configuratie, iar tarifele din catalogul tau
   (tarif unitar sau timp standard × tarif orar). Discount, TVA, tiparire/PDF din browser.
 - **Plan de executie**: etapele in ordinea lucrului, cu durate estimate din timpii standard.
-- **Verificari**: rezultat conform / neconform / nedeterminat pentru consistenta datelor.
+- **Circuite**: generate automat din doze, denumite si numerotate (CI_P01, CP_P01, CP_P03_02, LED_P01),
+  cu siguranta, cablu, lungime, putere si ΔU. Orice valoare se poate modifica (se pastreaza peste
+  regenerare); circuitele se pot comasa pe acelasi aparat.
+- **Sigurante necesare** pe fiecare tablou: lista de disjunctoare cu valorile lor, buton „Adauga”.
+  Aparatele au In (A), curba, IΔn/tip, circuitul protejat, RCD-ul amonte si plecarea spre tablourile secundare.
+- **Schema monofilara** generata din tablouri (export SVG, tiparire).
+- **Verificari** pe categorii: date, circuite (prize/puncte pe circuit, In ≤ Iz, ΔU, RCD), tablouri,
+  selectivitate amperica intre tablouri si fata de siguranta generala.
+- **Documentatie** completa pe A4: coperta, inventar, circuite, tablouri, schema, verificari, deviz, plan.
+- **Cheat sheet**: tabele mono/tri (putere, sectiune, ΔU la 30 m) si calculator rapid.
+- **Setari de proiectare** (Tarife & setari): limite si constante (Iz, ρ, ΔU, raport selectivitate),
+  cu valori de start — nu sunt reguli din normativ.
 
 ### Ce NU face (intentionat)
 
 - Nu propune tarife sau timpi: catalogul porneste gol si il completezi tu.
-- Nu dimensioneaza protectii sau sectiuni si nu declara conformitatea cu **I7-2011**.
+- Propune protectii si sectiuni doar din valorile tale implicite si nu declara conformitatea cu **I7-2011**.
   Regulile normative se adauga una cate una in `src/lib/engine/checks.ts`, fiecare cu referinta
   exacta (articol/tabel), teste si validare de catre electricianul autorizat.
 - Datele stau in **browserul curent** (localStorage). Foloseste *Export JSON* pentru copii de siguranta.
@@ -31,6 +43,10 @@ Repo separat de site-ul static `wattnet.ro`, publicat ca proiect Vercel separat.
 src/
   lib/engine/      ← motorul de calcul, fara React (testat separat)
     types.ts       ← modelul de date
+    electrical.ts  ← formule: putere, ΔU, Iz, sectiuni; reguli implicite
+    circuits.ts    ← generarea circuitelor, sugestii de sigurante
+    singleLine.ts  ← modelul schemei monofilare
+    cheatsheet.ts  ← tabelele de referinta
     inventory.ts   ← inventar doze / trasee (masurat vs. estimat)
     panel.ts       ← ocupare DIN, cascada tablouri
     pricing.ts     ← deviz + plan de executie
@@ -62,8 +78,6 @@ folosirea in activitatea firmei.
 ## Pasii urmatori
 
 1. Faza 2 „la gata”: aparataj, corpuri de iluminat, echipamente.
-2. Circuite: asocierea dozelor cu circuitele si cu aparatele din tablou.
-3. Schema monofilara generata din aceeasi configuratie.
-4. Materiale (lista de achizitii) separat de manopera.
-5. Supabase: proiecte salvate, autentificare, versiuni ale ofertelor.
-6. Configuratorul public pentru clienti pe wattnet.ro.
+2. Materiale (lista de achizitii) separat de manopera.
+3. Supabase: proiecte salvate, autentificare, versiuni ale ofertelor.
+4. Configuratorul public pentru clienti pe wattnet.ro.

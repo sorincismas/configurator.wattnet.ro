@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { defaultPricing, type PricingSettings, type Project } from "@/lib/engine";
+import { defaultPricing, normalizeProject, type PricingSettings, type Project } from "@/lib/engine";
 
 /**
  * Persistenta locala (browser) pentru faza 1. Datele stau doar pe dispozitivul
@@ -49,7 +49,7 @@ export function useWorkspace() {
   useEffect(() => {
     // citirea din localStorage se face doar in browser, dupa hidratare
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProjects(read<Project[]>(KEY_PROJECTS, []));
+    setProjects(read<Project[]>(KEY_PROJECTS, []).map(normalizeProject));
     setPricing(mergePricing(read<PricingSettings | null>(KEY_PRICING, null)));
     setCurrentId(read<string | null>(KEY_CURRENT, null));
     setLoaded(true);

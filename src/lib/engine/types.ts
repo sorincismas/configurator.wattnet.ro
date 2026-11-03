@@ -48,6 +48,8 @@ export type Room = {
    */
   routeM?: MeasuredValue;
   notes?: string;
+  /** Cod scurt al incaperii (ex. „P01"), folosit in codurile de circuit. Gol = generat automat. */
+  code?: string;
 };
 
 export type Level = {
@@ -94,7 +96,26 @@ export type PanelDevice = {
   rating?: string;
   /** Randul (sina DIN) pe care e montat, de la 0. */
   row: number;
+  /** Curent nominal In, in amperi. */
+  ratedA?: number;
+  /** Curba de declansare (MCB/RCBO). */
+  curve?: Curve;
+  /** Curent diferential IΔn, in mA (RCD/RCBO). */
+  sensitivityMa?: number;
+  /** Tipul diferentialului (RCD/RCBO). */
+  rcdType?: RcdType;
+  /** Circuitul generat pe care il protejeaza aparatul. */
+  circuitId?: string;
+  /** Diferentialul sub care este montat aparatul (pentru schema monofilara). */
+  upstreamRcdId?: string;
+  /** Tabloul secundar alimentat din acest aparat. */
+  feedsPanelId?: string;
+  /** Aparatul general (de intrare) al tabloului. */
+  isMain?: boolean;
 };
+
+export type Curve = "B" | "C" | "D";
+export type RcdType = "AC" | "A" | "F" | "B";
 
 export type Panel = {
   id: string;
@@ -138,6 +159,12 @@ export type Project = {
   discountPct: number;
   vatPct: number;
   notes?: string;
+  /** Siguranta generala a bransamentului, in amperi. */
+  mainBreakerA?: number;
+  /** Factorul de putere folosit la calculul puterii maxime absorbite (implicit 1). */
+  cosPhi?: number;
+  /** Modificarile facute de electrician peste circuitele generate, dupa id-ul circuitului. */
+  circuitOverrides?: Record<string, CircuitOverride>;
   createdAt: string;
   updatedAt: string;
 };
@@ -208,6 +235,63 @@ export type PricingSettings = {
   /** Metri de traseu estimati per doza, cand traseul nu e masurat. */
   defaultRouteMPerPoint: number;
   operations: LaborOperation[];
+  /** Limite si constante de proiectare (setabile). Lipsa = valorile implicite. */
+  rules?: Partial<RuleSettings>;
+};
+
+/* ------------------------------------------------------------------ */
+/* Circuite si reguli de proiectare                                    */
+/* ------------------------------------------------------------------ */
+
+export const CIRCUIT_KINDS = ["iluminat", "prize", "dedicat", "led"] as const;
+export type CircuitKind = (typeof CIRCUIT_KINDS)[number];
+
+export const CIRCUIT_KIND_LABELS: Record<CircuitKind, string> = {
+  iluminat: "Iluminat",
+  prize: "Prize",
+  dedicat: "Consumator dedicat",
+  led: "Banda LED",
+};
+
+export type CircuitDefaults = {
+  ratedA: number;
+  curve: Curve;
+  sectionMm2: number;
+  /** Putere instalata estimata: kW per punct (la LED: kW per metru de banda). */
+  powerPerUnitKw: number;
+};
+
+export type IzRow = { sectionMm2: number; mono: number; tri: number };
+
+export type RuleSettings = {
+  maxSocketsPerCircuit: number;
+  maxLightPointsPerCircuit: number;
+  lightingGrouping: "incapere" | "nivel";
+  defaults: Record<CircuitKind, CircuitDefaults>;
+  /** Curenti admisibili Iz (Cu/PVC in tub): 2 conductoare incarcate la mono, 3 la tri. */
+  iz: IzRow[];
+  /** Rezistivitatea conductorului cald, Ω·mm²/m. */
+  rho: number;
+  maxDropLightingPct: number;
+  maxDropOtherPct: number;
+  /** Raport minim In amonte / In aval pentru selectivitate amperica orientativa. */
+  selectivityRatio: number;
+  /** Sub acest raport Pmax / Pinstalat se semnaleaza simultaneitatea. */
+  minSimultaneity: number;
+};
+
+/** Modificari manuale peste un circuit generat. */
+export type CircuitOverride = {
+  name?: string;
+  ratedA?: number;
+  curve?: Curve;
+  poles?: 1 | 2 | 3 | 4;
+  sectionMm2?: number;
+  lengthM?: number;
+  powerKw?: number;
+  panelId?: string;
+  /** Comaseaza circuitul in alt circuit (acelasi aparat de protectie). */
+  mergeInto?: string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -216,8 +300,11 @@ export type PricingSettings = {
 
 export type CheckStatus = "conform" | "neconform" | "nedeterminat";
 
+export type CheckCategory = "date" | "circuite" | "tablouri" | "selectivitate";
+
 export type CheckResult = {
   id: string;
+  category?: CheckCategory;
   ruleId: string;
   status: CheckStatus;
   title: string;

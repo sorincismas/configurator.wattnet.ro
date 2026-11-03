@@ -7,6 +7,8 @@ import {
   newLevel,
   newRoom,
   pointsTotal,
+  projectCircuits,
+  autoRoomCode,
   roomRoute,
   type Level,
   type LevelKind,
@@ -43,6 +45,7 @@ export function LevelsTab({
   update: (fn: (p: Project) => Project) => void;
 }) {
   const inv = computeInventory(project, pricing.defaultRouteMPerPoint);
+  const circuits = projectCircuits(project, pricing);
 
   const setLevel = (id: string, fn: (l: Level) => Level) =>
     update((p) => ({ ...p, levels: p.levels.map((l) => (l.id === id ? fn(l) : l)) }));
@@ -67,6 +70,9 @@ export function LevelsTab({
 
       {project.levels.map((lvl) => {
         const li = inv.levels.find((x) => x.levelId === lvl.id);
+        const lc = circuits.filter((c) => c.levelId === lvl.id);
+        const cnt = (k: string) => lc.filter((c) => c.kind === k).length;
+        const panelName = project.panels.find((p) => p.id === lvl.panelId)?.name;
         return (
           <Card
             key={lvl.id}
@@ -112,9 +118,10 @@ export function LevelsTab({
             }
           >
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-sm">
+              <table className="w-full min-w-[940px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <th className="w-20 py-2 pr-2">Cod</th>
                     <th className="py-2 pr-2">Incapere</th>
                     {POINT_KINDS.map((k) => (
                       <th key={k} className="w-20 px-1 py-2" title={POINT_LABELS[k]}>
@@ -134,6 +141,13 @@ export function LevelsTab({
                     const measured = !!room.routeM && room.routeM.value > 0;
                     return (
                       <tr key={room.id} className="border-b border-slate-100 align-middle">
+                        <td className="py-1.5 pr-2">
+                          <TextInput
+                            value={room.code ?? ""}
+                            placeholder={autoRoomCode(room, lvl, project.levels)}
+                            onChange={(v) => setRoom(lvl.id, room.id, (r) => ({ ...r, code: v.trim() ? v : undefined }))}
+                          />
+                        </td>
                         <td className="py-1.5 pr-2">
                           <TextInput
                             value={room.name}
@@ -214,6 +228,25 @@ export function LevelsTab({
                 </tbody>
               </table>
             </div>
+            {lc.length > 0 && (
+              <p className="mt-3 text-sm text-slate-600">
+                →{" "}
+                <strong className="text-slate-800">{lc.length} circuite</strong>:{" "}
+                {[
+                  cnt("iluminat") && `${cnt("iluminat")} iluminat`,
+                  cnt("prize") && `${cnt("prize")} prize`,
+                  cnt("dedicat") && `${cnt("dedicat")} dedicate`,
+                  cnt("led") && `${cnt("led")} LED`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}{" "}
+                {panelName ? (
+                  <span className="text-slate-500">({panelName})</span>
+                ) : (
+                  <Badge tone="warn">fara tablou — circuitele merg provizoriu in tabloul principal</Badge>
+                )}
+              </p>
+            )}
             <div className="mt-3 flex gap-2">
               <Button
                 variant="secondary"

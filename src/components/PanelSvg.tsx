@@ -1,4 +1,4 @@
-import { layoutPanel, type DeviceKind, type Panel } from "@/lib/engine";
+import { deviceRatingText, layoutPanel, type DeviceKind, type Panel } from "@/lib/engine";
 
 const COLORS: Record<DeviceKind, { fill: string; stroke: string }> = {
   MCB: { fill: "#f8fafc", stroke: "#334155" },
@@ -74,17 +74,18 @@ export function PanelSvg({ panel }: { panel: Panel }) {
               const w = device.modules * MOD - 4;
               const yTop = y0 + 16;
               const h = ROW_H - 32;
+              const rating = deviceRatingText(device);
               return (
                 <g key={device.id}>
-                  <title>{`${device.label || device.kind} · ${device.kind} ${device.poles}P · ${device.modules} mod.${device.rating ? " · " + device.rating : ""}`}</title>
+                  <title>{`${device.label || device.kind} · ${device.kind} ${device.poles}P · ${device.modules} mod.${rating ? " · " + rating : ""}`}</title>
                   <rect x={x} y={yTop} width={w} height={h} rx={3} fill={c.fill} stroke={c.stroke} strokeWidth={1.5} />
                   <rect x={x + w / 2 - 5} y={yTop + 12} width={10} height={18} rx={2} fill={c.stroke} />
                   <text x={x + w / 2} y={yTop + 46} textAnchor="middle" fontSize={10} fontWeight={700} fill={c.stroke}>
                     {KIND_SHORT[device.kind]}
                   </text>
-                  {device.rating && (
+                  {rating && (
                     <text x={x + w / 2} y={yTop + 59} textAnchor="middle" fontSize={9} fill="#0f172a">
-                      {device.rating.slice(0, Math.max(4, device.modules * 5))}
+                      {rating.slice(0, Math.max(4, device.modules * 5))}
                     </text>
                   )}
                   <text

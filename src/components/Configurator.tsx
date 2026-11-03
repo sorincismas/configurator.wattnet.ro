@@ -1,7 +1,22 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { computeQuote, demoProject, newProject, runChecks, uid, type Project } from "@/lib/engine";
+import {
+  computeQuote,
+  demoProject,
+  newProject,
+  normalizeProject,
+  powerKw,
+  projectCircuits,
+  runChecks,
+  supplyPhases,
+  uid,
+  type Project,
+} from "@/lib/engine";
+import { CheatSheetTab } from "./CheatSheetTab";
+import { CircuitsTab } from "./CircuitsTab";
+import { DocumentationTab } from "./DocumentationTab";
+import { SingleLineTab } from "./SingleLineTab";
 import { useWorkspace } from "@/lib/store";
 import { ChecksTab } from "./ChecksTab";
 import { LevelsTab } from "./LevelsTab";
@@ -11,15 +26,29 @@ import { ProjectTab } from "./ProjectTab";
 import { QuoteTab } from "./QuoteTab";
 import { Button, lei } from "./ui";
 
-type Tab = "proiect" | "niveluri" | "tablouri" | "deviz" | "verificari" | "tarife";
+type Tab =
+  | "proiect"
+  | "niveluri"
+  | "circuite"
+  | "tablouri"
+  | "schema"
+  | "verificari"
+  | "deviz"
+  | "documentatie"
+  | "cheatsheet"
+  | "tarife";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "proiect", label: "Proiect" },
   { id: "niveluri", label: "Niveluri & doze" },
+  { id: "circuite", label: "Circuite" },
   { id: "tablouri", label: "Tablouri" },
-  { id: "deviz", label: "Deviz & plan" },
+  { id: "schema", label: "Schema monofilara" },
   { id: "verificari", label: "Verificari" },
-  { id: "tarife", label: "Tarife" },
+  { id: "deviz", label: "Deviz & plan" },
+  { id: "documentatie", label: "Documentatie" },
+  { id: "cheatsheet", label: "Cheat sheet" },
+  { id: "tarife", label: "Tarife & setari" },
 ];
 
 export function Configurator() {
@@ -53,7 +82,7 @@ export function Configurator() {
       const data = JSON.parse(await file.text());
       const p: Project | undefined = data?.project ?? (data?.schemaVersion ? data : undefined);
       if (!p || p.schemaVersion !== 1 || !Array.isArray(p.levels)) throw new Error("format");
-      add({ ...p, id: uid(), updatedAt: new Date().toISOString() });
+      add({ ...normalizeProject(p), id: uid(), updatedAt: new Date().toISOString() });
     } catch {
       alert("Fisierul nu este un proiect WATTNET valid.");
     }
@@ -157,11 +186,19 @@ export function Configurator() {
             </div>
           </nav>
           <main className="mx-auto max-w-7xl px-4 py-5">
-            {tab === "proiect" && <ProjectTab project={project} update={(fn) => ws.updateProject(project.id, fn)} />}
+            {tab === "proiect" && (
+              <ProjectTab project={project} pricing={ws.pricing} update={(fn) => ws.updateProject(project.id, fn)} />
+            )}
             {tab === "niveluri" && (
               <LevelsTab project={project} pricing={ws.pricing} update={(fn) => ws.updateProject(project.id, fn)} />
             )}
-            {tab === "tablouri" && <PanelsTab project={project} update={(fn) => ws.updateProject(project.id, fn)} />}
+            {tab === "circuite" && (
+              <CircuitsTab project={project} pricing={ws.pricing} update={(fn) => ws.updateProject(project.id, fn)} />
+            )}
+            {tab === "tablouri" && (
+              <PanelsTab project={project} pricing={ws.pricing} update={(fn) => ws.updateProject(project.id, fn)} />
+            )}
+            {tab === "schema" && <SingleLineTab project={project} pricing={ws.pricing} />}
             {tab === "deviz" && (
               <QuoteTab
                 project={project}
@@ -170,7 +207,11 @@ export function Configurator() {
                 goToPricing={() => setTab("tarife")}
               />
             )}
-            {tab === "verificari" && <ChecksTab project={project} pricing={ws.pricing} />}
+            {tab === "verificari" && (
+              <ChecksTab project={project} pricing={ws.pricing} goTo={(t) => setTab(t as Tab)} />
+            )}
+            {tab === "documentatie" && <DocumentationTab project={project} pricing={ws.pricing} />}
+            {tab === "cheatsheet" && <CheatSheetTab pricing={ws.pricing} />}
             {tab === "tarife" && <PricingTab pricing={ws.pricing} setPricing={ws.setPricing} />}
           </main>
         </>
@@ -183,11 +224,16 @@ function Summary({ project, ws }: { project: Project; ws: ReturnType<typeof useW
   const q = computeQuote(project, ws.pricing);
   const checks = runChecks(project, ws.pricing);
   const bad = checks.filter((c) => c.status === "neconform").length;
+  const phases = supplyPhases(project.supply);
+  const pMax = project.mainBreakerA && phases ? powerKw(phases, project.mainBreakerA, project.cosPhi ?? 1) : null;
+  const nCircuits = projectCircuits(project, ws.pricing).length;
   const open = checks.filter((c) => c.status === "nedeterminat").length;
   return (
     <div className="border-b border-slate-200 bg-white print:hidden">
-      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-4 py-3 text-sm sm:grid-cols-5">
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-4 py-3 text-sm sm:grid-cols-4 lg:grid-cols-7">
+        <Kpi label="Putere max. absorbita" value={pMax != null ? `${pMax.toLocaleString("ro-RO", { maximumFractionDigits: 2 })} kW` : "—"} />
         <Kpi label="Doze" value={String(q.inventory.pointsTotal)} />
+        <Kpi label="Circuite" value={String(nCircuits)} />
         <Kpi label="Trasee" value={`${Math.round(q.inventory.routeM.total)} m`} />
         <Kpi label="Tablouri" value={`${q.inventory.panels} (${q.inventory.deviceModules} mod.)`} />
         <Kpi label="Manopera fara TVA" value={q.complete ? lei(q.netTotal) : `${lei(q.netTotal)} *`} />
