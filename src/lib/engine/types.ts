@@ -21,8 +21,9 @@ export const POINT_KINDS = [
   "priza",
   "intrerupator",
   "iluminat",
-  "dedicat",
   "jonctiune",
+  "termostat",
+  "alteSurse",
 ] as const;
 export type PointKind = (typeof POINT_KINDS)[number];
 
@@ -30,18 +31,69 @@ export const POINT_LABELS: Record<PointKind, string> = {
   priza: "Doze prize",
   intrerupator: "Doze intrerupatoare",
   iluminat: "Doze/puncte iluminat",
-  dedicat: "Doze consumatori dedicati",
   jonctiune: "Doze de legatura",
+  termostat: "Doze termostat",
+  alteSurse: "Alte surse (cablu lasat)",
 };
 
 export type PointCounts = Record<PointKind, number>;
 
+/** Tipul peretelui in care se monteaza dozele (influenteaza manopera). */
+export const WALL_TYPES = ["zidarie", "gips-carton", "beton"] as const;
+export type WallType = (typeof WALL_TYPES)[number];
+export const WALL_LABELS: Record<WallType, string> = {
+  zidarie: "Zidarie",
+  "gips-carton": "Gips-carton",
+  beton: "Beton",
+};
+
+/** Marimea dozei. „fara" = iesire de cablu fara doza (ex. plita). */
+export const BOX_SIZES = ["simpla", "dubla", "tripla", "mare", "fara"] as const;
+export type BoxSize = (typeof BOX_SIZES)[number];
+export const BOX_SIZE_LABELS: Record<BoxSize, string> = {
+  simpla: "Simpla",
+  dubla: "Dubla",
+  tripla: "Tripla",
+  mare: "Mare / ramificatie",
+  fara: "Fara doza",
+};
+export const DEFAULT_BOX_SIZE: Record<PointKind, BoxSize> = {
+  priza: "simpla",
+  intrerupator: "simpla",
+  iluminat: "simpla",
+  jonctiune: "mare",
+  termostat: "simpla",
+  alteSurse: "fara",
+};
+
+/** Unde se termina un circuit dedicat (ce doza din incapere alimenteaza). */
+export type DedicatedEndpoint = "priza" | "alteSurse" | "jonctiune";
+
+/** Circuit dedicat dintr-o incapere (ex. priza frigider, plita). Nu se numara ca doza. */
+export type DedicatedCircuit = {
+  id: string;
+  name: string;
+  endpoint: DedicatedEndpoint;
+  ratedA?: number;
+  curve?: Curve;
+  poles?: 1 | 2 | 3 | 4;
+  sectionMm2?: number;
+  powerKw?: number;
+};
+
 export type Room = {
   id: string;
   name: string;
+  /** Numarul de doze, pe tipuri. */
   points: PointCounts;
-  /** Metri de banda LED (traseu de alimentare), daca exista. */
-  ledStripM: number;
+  /** Tipul peretelui (implicit zidarie). */
+  wall?: WallType;
+  /** Marimea dozei pe tip de doza (implicit DEFAULT_BOX_SIZE). */
+  boxSizes?: Partial<Record<PointKind, BoxSize>>;
+  /** Circuitele dedicate care ajung in incapere. */
+  dedicated?: DedicatedCircuit[];
+  /** @deprecated banda LED nu se mai foloseste; pastrat pentru proiectele vechi. */
+  ledStripM?: number;
   /**
    * Lungimea traseelor din incapere (tub/cablu pana la doze).
    * Daca lipseste, motorul foloseste o estimare din setari si o marcheaza ca estimare.
@@ -177,6 +229,8 @@ export type Project = {
 export type QuantitySource =
   | { kind: "points"; point: PointKind }
   | { kind: "pointsTotal" }
+  /** Doze dupa marime (si optional dupa tipul peretelui). */
+  | { kind: "boxes"; size: BoxSize; wall?: WallType }
   | { kind: "routeM" }
   | { kind: "ledStripM" }
   | { kind: "panels" }
@@ -235,6 +289,8 @@ export type PricingSettings = {
   /** Metri de traseu estimati per doza, cand traseul nu e masurat. */
   defaultRouteMPerPoint: number;
   operations: LaborOperation[];
+  /** Versiunea catalogului de operatiuni (pentru migrarea setarilor salvate). */
+  catalogVersion?: number;
   /** Limite si constante de proiectare (setabile). Lipsa = valorile implicite. */
   rules?: Partial<RuleSettings>;
 };
@@ -243,21 +299,20 @@ export type PricingSettings = {
 /* Circuite si reguli de proiectare                                    */
 /* ------------------------------------------------------------------ */
 
-export const CIRCUIT_KINDS = ["iluminat", "prize", "dedicat", "led"] as const;
+export const CIRCUIT_KINDS = ["iluminat", "prize", "dedicat"] as const;
 export type CircuitKind = (typeof CIRCUIT_KINDS)[number];
 
 export const CIRCUIT_KIND_LABELS: Record<CircuitKind, string> = {
   iluminat: "Iluminat",
   prize: "Prize",
-  dedicat: "Consumator dedicat",
-  led: "Banda LED",
+  dedicat: "Circuit dedicat",
 };
 
 export type CircuitDefaults = {
   ratedA: number;
   curve: Curve;
   sectionMm2: number;
-  /** Putere instalata estimata: kW per punct (la LED: kW per metru de banda). */
+  /** Putere instalata estimata: kW per punct (la dedicat: kW per circuit). */
   powerPerUnitKw: number;
 };
 

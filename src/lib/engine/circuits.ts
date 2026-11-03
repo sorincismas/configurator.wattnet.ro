@@ -33,7 +33,7 @@ import type {
 export type Circuit = {
   /** Id stabil (nu depinde de ordine sau de cod). */
   id: string;
-  /** Cod de circuit, ex. CI_P01, CP_P01, CP_P03_02, LED_P01. */
+  /** Cod de circuit, ex. CI_P01, CP_P01, CP_P03_02. */
   code: string;
   name: string;
   kind: CircuitKind;
@@ -144,11 +144,10 @@ export function deriveCircuits(project: Project, rules: RuleSettings, defaultRou
       const p = room.points;
       const weights = {
         iluminat: safe(p.iluminat) + safe(p.intrerupator),
-        prize: safe(p.priza),
-        dedicat: safe(p.dedicat),
-        led: safe(room.ledStripM) > 0 ? 1 : 0,
+        prize: generalSockets(room),
+        dedicat: room.dedicated?.length ?? 0,
       };
-      const total = weights.iluminat + weights.prize + weights.dedicat + weights.led;
+      const total = weights.iluminat + weights.prize + weights.dedicat;
       const route = roomRoute(room, defaultRouteMPerPoint);
       return {
         estimated: route.estimated > 0,
@@ -216,7 +215,7 @@ export function deriveCircuits(project: Project, rules: RuleSettings, defaultRou
         });
       }
 
-      const sockets = chunks(safe(room.points.priza), rules.maxSocketsPerCircuit);
+      const sockets = chunks(generalSockets(room), rules.maxSocketsPerCircuit);
       sockets.forEach((n, i) => {
         drafts.push({
           ...base("prize"),
@@ -231,34 +230,24 @@ export function deriveCircuits(project: Project, rules: RuleSettings, defaultRou
         });
       });
 
-      const ded = Math.floor(safe(room.points.dedicat));
-      for (let i = 0; i < ded; i++) {
+      (room.dedicated ?? []).forEach((d, i) => {
+        const def = rules.defaults.dedicat;
         drafts.push({
           ...base("dedicat"),
-          id: `cd:${room.id}:${i}`,
+          id: `cd:${room.id}:${d.id}`,
           code: `CP_${code}_${String(i + 1).padStart(2, "0")}`,
-          name: `Dedicat ${room.name} ${i + 1}`,
+          name: d.name?.trim() || `Dedicat ${room.name} ${i + 1}`,
           roomIds: [room.id],
           points: 1,
+          ratedA: d.ratedA && d.ratedA > 0 ? d.ratedA : def.ratedA,
+          curve: d.curve ?? def.curve,
+          poles: d.poles ?? 1,
+          sectionMm2: d.sectionMm2 && d.sectionMm2 > 0 ? d.sectionMm2 : def.sectionMm2,
           lengthM: unit,
           lengthEstimated: share.estimated,
-          powerKw: rules.defaults.dedicat.powerPerUnitKw,
+          powerKw: d.powerKw != null && d.powerKw >= 0 ? d.powerKw : def.powerPerUnitKw,
         });
-      }
-
-      if (safe(room.ledStripM) > 0) {
-        drafts.push({
-          ...base("led"),
-          id: `led:${room.id}`,
-          code: `LED_${code}`,
-          name: `Banda LED ${room.name}`,
-          roomIds: [room.id],
-          points: 1,
-          lengthM: unit,
-          lengthEstimated: share.estimated,
-          powerKw: safe(room.ledStripM) * rules.defaults.led.powerPerUnitKw,
-        });
-      }
+      });
     }
   }
 
@@ -311,7 +300,7 @@ export function deriveCircuits(project: Project, rules: RuleSettings, defaultRou
       const n = (order.get(key) ?? 0) + 1;
       order.set(key, n);
       const dropLimitPct =
-        c.kind === "iluminat" || c.kind === "led" ? rules.maxDropLightingPct : rules.maxDropOtherPct;
+        c.kind === "iluminat" ? rules.maxDropLightingPct : rules.maxDropOtherPct;
       return {
         ...c,
         phases,
@@ -322,6 +311,31 @@ export function deriveCircuits(project: Project, rules: RuleSettings, defaultRou
         dropLimitPct,
       };
     });
+}
+
+/**
+ * Dozele de priza care raman pe circuitele generale de prize: cele care sunt
+ * capat de circuit dedicat (ex. priza frigider) au cablul lor separat.
+ */
+export function generalSockets(room: Room): number {
+  const dedicatedSockets = (room.dedicated ?? []).filter((d) => d.endpoint === "priza").length;
+  return Math.max(0, safe(room.points.priza) - dedicatedSockets);
+}
+
+/** Cablurile care ajung intr-o incapere, cate unul pe circuit. */
+export function roomCables(roomId: string, circuits: Circuit[]): Circuit[] {
+  return circuits.filter((c) => c.roomIds.includes(roomId));
+}
+
+/** „3 cabluri: 1× 3×1,5 · 2× 3×2,5" — rezumatul cablurilor dintr-o incapere. */
+export function cableSummary(cables: Circuit[]): string {
+  if (!cables.length) return "—";
+  const by = new Map<string, number>();
+  for (const c of cables) by.set(c.cable, (by.get(c.cable) ?? 0) + 1);
+  const parts = [...by.entries()]
+    .sort((a, b) => parseFloat(a[0].split("×")[1].replace(",", ".")) - parseFloat(b[0].split("×")[1].replace(",", ".")))
+    .map(([cable, n]) => `${n}× ${cable}`);
+  return `${cables.length} ${cables.length === 1 ? "cablu" : "cabluri"}: ${parts.join(" · ")}`;
 }
 
 /** Circuitele proiectului, cu regulile din setari. */

@@ -8,8 +8,10 @@ Repo separat de site-ul static `wattnet.ro`, publicat ca proiect Vercel separat.
 - **Proiect si beneficiar**: cod, tip cladire, alimentare, date client, siguranta generala (A) →
   putere maxima absorbita (mono 230·I·cosφ, tri √3·400·I·cosφ) si putere instalata estimata.
 - **Niveluri si doze**: subsol / demisol / parter / etaj / mansarda / anexe (garaj, foisor) → incaperi →
-  doze de prize, intrerupatoare, iluminat, consumatori dedicati si doze de legatura, banda LED si
-  lungimea traseelor. Traseul nemasurat se estimeaza automat si e marcat ca **estimare**.
+  doze de prize, intrerupatoare, iluminat, legatura, termostat si alte surse (cablu lasat, fara doza),
+  cu tipul peretelui pe incapere si marimea dozei pe tip; circuitele dedicate pe incapere (nu se numara
+  ca doze) si cablurile care ajung in fiecare incapere; lungimea traseelor. Traseul nemasurat se
+  estimeaza automat si e marcat ca **estimare**.
 - **Tablouri in cascada**: tablou principal plus tablouri secundare alimentate din alt tablou,
   aparate pe sine DIN, ocuparea in module, desen SVG orientativ si lungimea cablului de alimentare.
 - **Deviz de manopera**: cantitatile vin din configuratie, iar tarifele din catalogul tau

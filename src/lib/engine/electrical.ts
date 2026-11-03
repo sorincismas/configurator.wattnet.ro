@@ -98,7 +98,6 @@ export function defaultRules(): RuleSettings {
       iluminat: { ratedA: 10, curve: "B", sectionMm2: 1.5, powerPerUnitKw: 0.06 },
       prize: { ratedA: 16, curve: "C", sectionMm2: 2.5, powerPerUnitKw: 0.2 },
       dedicat: { ratedA: 16, curve: "C", sectionMm2: 2.5, powerPerUnitKw: 2 },
-      led: { ratedA: 6, curve: "B", sectionMm2: 1.5, powerPerUnitKw: 0.015 },
     },
     iz: [
       { sectionMm2: 1.5, mono: 16.5, tri: 15 },
@@ -127,7 +126,6 @@ export function getRules(settings: Pick<PricingSettings, "rules"> | undefined): 
       iluminat: { ...def.defaults.iluminat, ...saved.defaults?.iluminat },
       prize: { ...def.defaults.prize, ...saved.defaults?.prize },
       dedicat: { ...def.defaults.dedicat, ...saved.defaults?.dedicat },
-      led: { ...def.defaults.led, ...saved.defaults?.led },
     },
     iz: saved.iz?.length ? saved.iz : def.iz,
   };

@@ -3,6 +3,8 @@ import {
   CHEAT_MONO,
   CHEAT_TRI,
   addCircuitDevices,
+  cableSummary,
+  roomCables,
   buildSingleLine,
   computeInventory,
   computeQuote,
@@ -15,6 +17,7 @@ import {
   findCascadeCycle,
   layoutPanel,
   minSectionFor,
+  newDedicated,
   newDevice,
   newLevel,
   newPanel,
@@ -133,14 +136,16 @@ describe("deviz", () => {
     const s = defaultPricing();
     s.hourlyRate = 120;
     s.operations = s.operations.map((o) =>
-      o.id === "doza-priza" ? { ...o, minutesPerUnit: 15 } : { ...o, enabled: false },
+      o.id === "doza-zidarie-simpla" ? { ...o, minutesPerUnit: 15 } : { ...o, enabled: false },
     );
     const q = computeQuote(p, s);
     expect(q.lines).toHaveLength(1);
     expect(q.lines[0].unitPrice).toBe(30);
-    expect(q.lines[0].amount).toBe(120);
+    // 4 prize + 2 intrerupatoare + 2 iluminat, toate doze simple in zidarie
+    expect(q.lines[0].quantity).toBe(8);
+    expect(q.lines[0].amount).toBe(240);
     expect(q.lines[0].method).toBe("timp-x-tarif-orar");
-    expect(q.totalMinutes).toBe(60);
+    expect(q.totalMinutes).toBe(120);
   });
 
   it("marcheaza cantitatile estimate", () => {
@@ -235,8 +240,13 @@ function roomsProject(): Project {
   p.supply = "monofazat";
   const lvl = newLevel("parter");
   const r = newRoom("Bucatarie");
-  r.points = { ...emptyPoints(), priza: 12, iluminat: 3, intrerupator: 1, dedicat: 3 };
-  r.ledStripM = 4;
+  // 14 doze de priza: 2 sunt capete de circuite dedicate → 12 pe circuitele generale
+  r.points = { ...emptyPoints(), priza: 14, iluminat: 3, intrerupator: 1, alteSurse: 1 };
+  r.dedicated = [
+    newDedicated({ name: "Priza frigider", endpoint: "priza" }),
+    newDedicated({ name: "Cuptor", endpoint: "priza" }),
+    newDedicated({ name: "Plita", endpoint: "alteSurse", ratedA: 32, sectionMm2: 6 }),
+  ];
   lvl.rooms = [r];
   lvl.panelId = p.panels[0].id;
   p.levels = [lvl];
@@ -255,12 +265,29 @@ describe("circuite", () => {
       "CP_P01_01",
       "CP_P01_02",
       "CP_P01_03",
-      "LED_P01",
     ]);
     expect(c.find((x) => x.code === "CP_P01")!.points).toBe(8);
     expect(c.find((x) => x.code === "CP_P01_b")!.points).toBe(4);
-    expect(c.map((x) => x.order)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(c.map((x) => x.order)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(c.find((x) => x.kind === "prize")!.cable).toBe("3×2,5");
+    const plita = c.find((x) => x.name === "Plita")!;
+    expect(plita.code).toBe("CP_P01_03");
+    expect(plita.cable).toBe("3×6");
+    expect(plita.ratedA).toBe(32);
+  });
+
+  it("marcheaza cablurile care ajung in incapere", () => {
+    const p = roomsProject();
+    const c = deriveCircuits(p, rules, 6);
+    const cables = roomCables(p.levels[0].rooms[0].id, c);
+    expect(cables).toHaveLength(6);
+    expect(cableSummary(cables)).toBe("6 cabluri: 1× 3×1,5 · 4× 3×2,5 · 1× 3×6");
+  });
+
+  it("circuitele dedicate nu se numara ca doze", () => {
+    const p = roomsProject();
+    expect(computeInventory(p, 6).pointsTotal).toBe(14 + 3 + 1 + 1);
+    expect(computeInventory(p, 6).dedicatedCircuits).toBe(3);
   });
 
   it("foloseste codul de incapere introdus", () => {
@@ -361,7 +388,54 @@ describe("verificari de proiectare", () => {
   });
 });
 
+describe("doze pe perete si marime", () => {
+  it("numara dozele dupa perete si marime in deviz", () => {
+    const p = simpleProject();
+    const r = p.levels[0].rooms[0];
+    r.wall = "gips-carton";
+    r.boxSizes = { intrerupator: "dubla" };
+    const s = defaultPricing();
+    s.operations = s.operations.map((o) => ({ ...o, unitPrice: 1 }));
+    const q = computeQuote(p, s);
+    const qty = (id: string) => q.lines.find((l) => l.operationId === id)?.quantity ?? 0;
+    expect(qty("doza-gips-carton-simpla")).toBe(6);
+    expect(qty("doza-gips-carton-dubla")).toBe(2);
+    expect(qty("doza-zidarie-simpla")).toBe(0);
+  });
+
+  it("alte surse fara doza intra la iesire de cablu", () => {
+    const p = roomsProject();
+    const s = defaultPricing();
+    s.operations = s.operations.map((o) => ({ ...o, unitPrice: 1 }));
+    expect(computeQuote(p, s).lines.find((l) => l.operationId === "iesire-cablu")?.quantity).toBe(1);
+  });
+
+  it("semnaleaza circuitele dedicate fara doza de capat", () => {
+    const p = roomsProject();
+    p.levels[0].rooms[0].points.alteSurse = 0;
+    const res = runChecks(p, defaultPricing());
+    expect(res.find((r) => r.ruleId === "DATE-003")?.status).toBe("nedeterminat");
+  });
+});
+
 describe("compatibilitate", () => {
+  it("transforma dozele dedicate vechi in circuite dedicate", () => {
+    const p = newProject();
+    const r = newRoom("Bucatarie");
+    (r.points as Record<string, number>).dedicat = 2;
+    r.points.priza = 5;
+    p.levels[0].rooms = [r];
+    const n = normalizeProject(p).levels[0].rooms[0];
+    expect(n.points.priza).toBe(7);
+    expect("dedicat" in n.points).toBe(false);
+    expect(n.dedicated?.map((d) => d.id)).toEqual(["0", "1"]);
+    // id-ul circuitului ramane cel vechi (cd:<incapere>:<i>), deci modificarile salvate se pastreaza
+    expect(deriveCircuits(normalizeProject(p), defaultRules(), 6).filter((c) => c.kind === "dedicat").map((c) => c.id)).toEqual([
+      `cd:${r.id}:0`,
+      `cd:${r.id}:1`,
+    ]);
+  });
+
   it("citeste valorile din textul vechi de caracteristici", () => {
     expect(parseRating("C16")).toEqual({ curve: "C", ratedA: 16 });
     expect(parseRating("40A 30mA tip A")).toEqual({ ratedA: 40, sensitivityMa: 30, rcdType: "A" });

@@ -2,7 +2,12 @@
 
 import { useState, type ReactNode } from "react";
 import {
+  BOX_SIZE_LABELS,
+  DEFAULT_BOX_SIZE,
   DEVICE_LABELS,
+  WALL_LABELS,
+  cableSummary,
+  roomCables,
   POINT_KINDS,
   POINT_LABELS,
   buildSingleLine,
@@ -134,12 +139,24 @@ export function DocumentationTab({ project, pricing }: { project: Project; prici
             <div key={lvl.id} className="break-inside-avoid">
               <h3 className="mb-1 font-semibold">{lvl.name}</h3>
               <Table
-                head={["Cod", "Incapere", ...POINT_KINDS.map((k) => POINT_LABELS[k].replace("Doze ", "")), "LED (m)", "Traseu (m)"]}
+                head={[
+                  "Cod",
+                  "Incapere",
+                  "Perete",
+                  ...POINT_KINDS.map((k) => POINT_LABELS[k].replace("Doze ", "")),
+                  "Circuite / cabluri",
+                  "Traseu (m)",
+                ]}
                 rows={lvl.rooms.map((r) => [
                   roomCode(r, lvl, project.levels),
                   r.name,
-                  ...POINT_KINDS.map((k) => String(r.points[k] || "")),
-                  r.ledStripM ? num(r.ledStripM) : "",
+                  WALL_LABELS[r.wall ?? "zidarie"],
+                  ...POINT_KINDS.map((k) =>
+                    r.points[k]
+                      ? `${r.points[k]}${(r.boxSizes?.[k] ?? DEFAULT_BOX_SIZE[k]) !== DEFAULT_BOX_SIZE[k] ? ` (${BOX_SIZE_LABELS[r.boxSizes![k]!].toLowerCase()})` : ""}`
+                      : "",
+                  ),
+                  cableSummary(roomCables(r.id, circuits)),
                   `${num(roomRoute(r, pricing.defaultRouteMPerPoint).total)}${r.routeM && r.routeM.value > 0 && r.routeM.source === "masurat" ? "" : " *"}`,
                 ])}
               />

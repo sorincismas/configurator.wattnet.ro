@@ -19,7 +19,7 @@ export const CHECK_GROUPS: { id: CheckCategory; label: string }[] = [
 
 /** Tab-ul unde se rezolva o verificare. */
 export function checkTargetTab(c: CheckResult): string {
-  if (c.ruleId.startsWith("CIRC-005") || c.ruleId === "DATE-002" || c.ruleId === "DEVIZ-001") return "niveluri";
+  if (c.ruleId.startsWith("CIRC-005") || ["DATE-002", "DATE-003", "DEVIZ-001"].includes(c.ruleId)) return "niveluri";
   if (c.ruleId.startsWith("CIRC-004") || c.ruleId.startsWith("CIRC-006")) return "tablouri";
   if (c.ruleId.startsWith("CIRC")) return "circuite";
   if (c.ruleId.startsWith("TAB") || c.ruleId.startsWith("SEL")) return "tablouri";

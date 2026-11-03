@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { defaultPricing, normalizeProject, type PricingSettings, type Project } from "@/lib/engine";
+import {
+  CATALOG_VERSION,
+  OBSOLETE_OPERATIONS,
+  defaultPricing,
+  normalizeProject,
+  type PricingSettings,
+  type Project,
+} from "@/lib/engine";
 
 /**
  * Persistenta locala (browser) pentru faza 1. Datele stau doar pe dispozitivul
@@ -33,10 +40,17 @@ function mergePricing(saved: PricingSettings | null): PricingSettings {
   const def = defaultPricing();
   if (!saved) return def;
   const known = new Set(saved.operations.map((o) => o.id));
+  // Catalog v2: dozele se platesc dupa perete si marime. Operatiunile vechi raman
+  // (cu tarifele lor), dar se dezactiveaza o singura data, ca sa nu se numere de doua ori.
+  const migrate = (saved.catalogVersion ?? 1) < CATALOG_VERSION;
+  const savedOps = migrate
+    ? saved.operations.map((o) => (OBSOLETE_OPERATIONS.includes(o.id) ? { ...o, enabled: false } : o))
+    : saved.operations;
   return {
     ...def,
     ...saved,
-    operations: [...saved.operations, ...def.operations.filter((o) => !known.has(o.id))],
+    catalogVersion: CATALOG_VERSION,
+    operations: [...savedOps, ...def.operations.filter((o) => !known.has(o.id))],
   };
 }
 

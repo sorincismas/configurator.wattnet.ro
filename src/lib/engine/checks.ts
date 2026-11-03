@@ -62,6 +62,28 @@ export function runChecks(project: Project, settings: PricingSettings): CheckRes
     });
   }
 
+  // Circuitele dedicate trebuie sa se termine intr-o doza numarata in incapere.
+  const ENDPOINT_LABEL = { priza: "doze de priza", alteSurse: "iesiri de cablu (alte surse)", jonctiune: "doze de legatura" } as const;
+  for (const lvl of project.levels) {
+    for (const r of lvl.rooms) {
+      for (const ep of ["priza", "alteSurse", "jonctiune"] as const) {
+        const need = (r.dedicated ?? []).filter((d) => d.endpoint === ep).length;
+        const have = r.points[ep] || 0;
+        if (need > have) {
+          out.push({
+            id: `ded-end-${r.id}-${ep}`,
+            ruleId: "DATE-003",
+            category: "date",
+            status: "nedeterminat",
+            title: `${r.name} — capete circuite dedicate`,
+            target: r.id,
+            message: `${need} circuite dedicate se termina in ${ENDPOINT_LABEL[ep]}, dar incaperea are doar ${have}. Mareste numarul de doze sau schimba capatul circuitului.`,
+          });
+        }
+      }
+    }
+  }
+
   if (inv.routeM.estimated > 0) {
     out.push({
       id: "routes",

@@ -229,7 +229,7 @@ function RulesCard({
               ))}
             </tbody>
           </table>
-          <p className="mt-1 text-xs text-slate-500">La banda LED puterea este pe metru de banda.</p>
+          <p className="mt-1 text-xs text-slate-500">La circuitul dedicat puterea este pe circuit (o poti schimba pe fiecare circuit).</p>
         </div>
 
         <div className="overflow-x-auto">

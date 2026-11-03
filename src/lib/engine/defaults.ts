@@ -1,16 +1,22 @@
 import { addCircuitDevices, deriveCircuits } from "./circuits";
 import { defaultRules } from "./electrical";
 import { emptyPoints } from "./inventory";
-import type {
-  Curve,
-  Level,
-  LevelKind,
-  Panel,
-  PanelDevice,
-  PricingSettings,
-  Project,
-  RcdType,
-  Room,
+import {
+  BOX_SIZES,
+  BOX_SIZE_LABELS,
+  WALL_LABELS,
+  WALL_TYPES,
+  type BoxSize,
+  type Curve,
+  type DedicatedCircuit,
+  type Level,
+  type LevelKind,
+  type Panel,
+  type PanelDevice,
+  type PricingSettings,
+  type Project,
+  type RcdType,
+  type Room,
 } from "./types";
 
 export function uid(): string {
@@ -19,8 +25,18 @@ export function uid(): string {
 }
 
 export function newRoom(name = "Incapere noua"): Room {
-  return { id: uid(), name, points: emptyPoints(), ledStripM: 0 };
+  return { id: uid(), name, points: emptyPoints(), wall: "zidarie" };
 }
+
+export function newDedicated(partial: Partial<DedicatedCircuit> = {}): DedicatedCircuit {
+  return { id: uid(), name: "", endpoint: "priza", ...partial };
+}
+
+/** Versiunea curenta a catalogului de operatiuni. */
+export const CATALOG_VERSION = 2;
+
+/** Operatiuni din catalogul vechi, inlocuite in versiunea 2 (doze pe perete si marime; fara LED). */
+export const OBSOLETE_OPERATIONS = ["doza-priza", "doza-intrerupator", "doza-iluminat", "doza-dedicat", "doza-jonctiune", "led"];
 
 export function newLevel(kind: LevelKind = "parter", name?: string): Level {
   const names: Record<LevelKind, string> = {
@@ -93,19 +109,28 @@ export function defaultPricing(): PricingSettings {
     quantity: PricingSettings["operations"][number]["quantity"],
   ) => ({ id, name, unit, stage, quantity, unitPrice: null, minutesPerUnit: null, enabled: true });
 
+  const boxOps = WALL_TYPES.flatMap((wall) =>
+    BOX_SIZES.filter((s): s is Exclude<BoxSize, "fara"> => s !== "fara").map((size) =>
+      op(
+        `doza-${wall}-${size}`,
+        `Montaj doza ${BOX_SIZE_LABELS[size].toLowerCase()} in ${WALL_LABELS[wall].toLowerCase()}`,
+        "buc",
+        "doze",
+        { kind: "boxes", size, wall },
+      ),
+    ),
+  );
+
   return {
     hourlyRate: null,
     defaultRouteMPerPoint: 6,
+    catalogVersion: CATALOG_VERSION,
     operations: [
       op("trasare", "Trasare puncte electrice", "punct", "trasare", { kind: "pointsTotal" }),
-      op("doza-priza", "Montaj doza priza", "buc", "doze", { kind: "points", point: "priza" }),
-      op("doza-intrerupator", "Montaj doza intrerupator", "buc", "doze", { kind: "points", point: "intrerupator" }),
-      op("doza-iluminat", "Montaj doza / punct iluminat", "buc", "doze", { kind: "points", point: "iluminat" }),
-      op("doza-dedicat", "Montaj doza consumator dedicat", "buc", "doze", { kind: "points", point: "dedicat" }),
-      op("doza-jonctiune", "Montaj doza de legatura", "buc", "doze", { kind: "points", point: "jonctiune" }),
+      ...boxOps,
+      op("iesire-cablu", "Iesire de cablu fara doza (alte surse)", "buc", "doze", { kind: "boxes", size: "fara" }),
       op("slituire", "Executie traseu (slituire / canal)", "m", "trasee", { kind: "routeM" }),
       op("pozare", "Pozare tub si cablu", "m", "trasee", { kind: "routeM" }),
-      op("led", "Traseu alimentare banda LED", "m", "trasee", { kind: "ledStripM" }),
       op("alimentare-secundar", "Cablu alimentare tablou secundar", "m", "trasee", { kind: "feederM" }),
       op("montaj-tablou", "Montaj cutie tablou", "buc", "tablouri", { kind: "panels" }),
       op("aparat-modular", "Montaj aparat modular", "buc", "conexiuni", { kind: "devices" }),
@@ -132,21 +157,38 @@ export function demoProject(): Project {
 
   const parter = newLevel("parter");
   parter.rooms = [
-    room("Living", { priza: 8, intrerupator: 3, iluminat: 4, jonctiune: 2 }, { ledStripM: 6 }),
-    room("Bucatarie", { priza: 7, intrerupator: 1, iluminat: 2, dedicat: 3, jonctiune: 1 }, {
+    room("Living", { priza: 8, intrerupator: 3, iluminat: 4, jonctiune: 2, termostat: 1 }, {
+      boxSizes: { intrerupator: "dubla" },
+    }),
+    room("Bucatarie", { priza: 9, intrerupator: 1, iluminat: 2, jonctiune: 1, alteSurse: 1 }, {
       routeM: { value: 42, source: "masurat" },
+      dedicated: [
+        newDedicated({ name: "Plita", endpoint: "alteSurse", ratedA: 32, curve: "C", sectionMm2: 6, powerKw: 7 }),
+        newDedicated({ name: "Cuptor", endpoint: "priza", powerKw: 3 }),
+        newDedicated({ name: "Masina de spalat vase", endpoint: "priza", powerKw: 2.2 }),
+      ],
     }),
     room("Hol", { priza: 2, intrerupator: 3, iluminat: 2, jonctiune: 1 }),
-    room("Baie parter", { priza: 2, intrerupator: 1, iluminat: 2, dedicat: 1, jonctiune: 1 }),
+    room("Baie parter", { priza: 3, intrerupator: 1, iluminat: 2, jonctiune: 1 }, {
+      wall: "gips-carton",
+      dedicated: [newDedicated({ name: "Boiler", endpoint: "priza", powerKw: 2 })],
+    }),
   ];
   const etaj = newLevel("etaj");
   etaj.rooms = [
-    room("Dormitor 1", { priza: 5, intrerupator: 2, iluminat: 1, jonctiune: 1 }),
-    room("Dormitor 2", { priza: 5, intrerupator: 2, iluminat: 1, jonctiune: 1 }),
-    room("Baie etaj", { priza: 2, intrerupator: 1, iluminat: 2, dedicat: 1, jonctiune: 1 }),
+    room("Dormitor 1", { priza: 5, intrerupator: 2, iluminat: 1, jonctiune: 1, termostat: 1 }, { wall: "gips-carton" }),
+    room("Dormitor 2", { priza: 5, intrerupator: 2, iluminat: 1, jonctiune: 1, termostat: 1 }, { wall: "gips-carton" }),
+    room("Baie etaj", { priza: 3, intrerupator: 1, iluminat: 2, jonctiune: 1 }, {
+      dedicated: [newDedicated({ name: "Masina de spalat", endpoint: "priza", powerKw: 2.2 })],
+    }),
   ];
   const garaj = newLevel("anexa", "Garaj");
-  garaj.rooms = [room("Garaj", { priza: 4, intrerupator: 1, iluminat: 2, dedicat: 1 })];
+  garaj.rooms = [
+    room("Garaj", { priza: 4, intrerupator: 1, iluminat: 2, alteSurse: 1 }, {
+      wall: "beton",
+      dedicated: [newDedicated({ name: "Motor usa garaj", endpoint: "alteSurse", powerKw: 0.5 })],
+    }),
+  ];
 
   const tp = newPanel("Tablou principal");
   tp.rows = 3;
@@ -218,6 +260,7 @@ export function parseRating(text: string): Pick<PanelDevice, "ratedA" | "curve" 
 export function normalizeProject(p: Project): Project {
   return {
     ...p,
+    levels: (p.levels ?? []).map((lvl) => ({ ...lvl, rooms: (lvl.rooms ?? []).map(normalizeRoom) })),
     panels: (p.panels ?? []).map((panel) => ({
       ...panel,
       devices: (panel.devices ?? []).map((d) =>
@@ -225,4 +268,24 @@ export function normalizeProject(p: Project): Project {
       ),
     })),
   };
+}
+
+/**
+ * Proiectele vechi aveau „dedicat" ca numar de doze. Acum este o lista de
+ * circuite: fiecare doza dedicata devine un circuit dedicat care se termina
+ * la o doza de priza (numarul de doze ramane acelasi). Id-urile 0, 1, ...
+ * pastreaza modificarile facute deja pe circuitele generate.
+ */
+function normalizeRoom(r: Room): Room {
+  const legacy = (r.points as Record<string, number | undefined>).dedicat;
+  if (!legacy) return r;
+  const n = Math.max(0, Math.floor(legacy));
+  const { dedicat: _drop, ...rest } = r.points as Record<string, number>;
+  void _drop;
+  const points = { ...emptyPoints(), ...rest } as Room["points"];
+  points.priza = (points.priza || 0) + n;
+  const dedicated = r.dedicated?.length
+    ? r.dedicated
+    : Array.from({ length: n }, (_, i) => newDedicated({ id: String(i), name: `Circuit dedicat ${i + 1}`, endpoint: "priza" }));
+  return { ...r, points, dedicated };
 }

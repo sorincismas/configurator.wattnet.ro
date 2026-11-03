@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CIRCUIT_KINDS,
   CIRCUIT_KIND_LABELS,
   STANDARD_BREAKERS,
   STANDARD_SECTIONS,
@@ -73,9 +74,9 @@ export function CircuitsTab({
   return (
     <div className="flex flex-col gap-4">
       <Card title="Circuite generate">
-        <div className="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
           <Stat label="Total circuite" value={String(circuits.length)} strong />
-          {(["iluminat", "prize", "dedicat", "led"] as const).map((k) => (
+          {CIRCUIT_KINDS.map((k) => (
             <Stat key={k} label={CIRCUIT_KIND_LABELS[k]} value={String(circuits.filter((c) => c.kind === k).length)} />
           ))}
           <Stat label="Putere instalata" value={`${num(total, 2)} kW`} />
@@ -83,7 +84,7 @@ export function CircuitsTab({
         <p className="mt-3 text-xs text-slate-500">
           Circuitele se genereaza din dozele introduse: iluminat {rules.lightingGrouping === "nivel" ? "pe nivel" : "pe incapere"} (max{" "}
           {rules.maxLightPointsPerCircuit} puncte), prize pe incapere (max {rules.maxSocketsPerCircuit} prize), un circuit pentru
-          fiecare consumator dedicat si unul pentru banda LED. Orice valoare modificata aici se pastreaza (marcata cu •); „↺”
+          fiecare circuit dedicat marcat in incapere (tab-ul Niveluri &amp; doze). Orice valoare modificata aici se pastreaza (marcata cu •); „↺”
           revine la valoarea generata. „Comaseaza in” pune circuitul pe acelasi aparat cu altul. Limitele se schimba in Tarife &
           setari.
         </p>

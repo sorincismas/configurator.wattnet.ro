@@ -44,9 +44,18 @@ export function quantityFor(src: QuantitySource, inv: Inventory): QuantityWithSo
   const plain = (n: number): QuantityWithSource => ({ total: n, measured: n, estimated: 0 });
   switch (src.kind) {
     case "points":
-      return plain(inv.points[src.point]);
+      return plain(inv.points[src.point] ?? 0);
     case "pointsTotal":
       return plain(inv.pointsTotal);
+    case "boxes":
+      return plain(
+        Object.entries(inv.boxes)
+          .filter(([key]) => {
+            const [wall, size] = key.split("|");
+            return size === src.size && (!src.wall || wall === src.wall);
+          })
+          .reduce((t, [, n]) => t + n, 0),
+      );
     case "routeM":
       return inv.routeM;
     case "ledStripM":
