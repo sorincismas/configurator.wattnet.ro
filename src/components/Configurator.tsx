@@ -91,7 +91,7 @@ export function Configurator() {
   return (
     <div className="min-h-screen bg-slate-100">
       <header className="border-b border-slate-800 bg-slate-900 text-white print:hidden">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-4 lg:px-6 2xl:px-8">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-400 text-lg font-black text-slate-900">
               W
@@ -169,7 +169,7 @@ export function Configurator() {
         <>
           <Summary project={project} ws={ws} />
           <nav className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur print:hidden">
-            <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4">
+            <div className="flex w-full gap-1 overflow-x-auto px-3 sm:px-4 lg:px-6 2xl:px-8">
               {TABS.map((t) => (
                 <button
                   key={t.id}
@@ -185,7 +185,7 @@ export function Configurator() {
               ))}
             </div>
           </nav>
-          <main className="mx-auto max-w-7xl px-4 py-5">
+          <main className="w-full px-3 py-5 sm:px-4 lg:px-6 2xl:px-8">
             {tab === "proiect" && (
               <ProjectTab project={project} pricing={ws.pricing} update={(fn) => ws.updateProject(project.id, fn)} />
             )}
@@ -230,7 +230,7 @@ function Summary({ project, ws }: { project: Project; ws: ReturnType<typeof useW
   const open = checks.filter((c) => c.status === "nedeterminat").length;
   return (
     <div className="border-b border-slate-200 bg-white print:hidden">
-      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-4 py-3 text-sm sm:grid-cols-4 lg:grid-cols-7">
+      <div className="grid w-full grid-cols-2 gap-3 px-3 py-3 text-sm sm:grid-cols-4 sm:px-4 lg:grid-cols-7 lg:px-6 2xl:px-8">
         <Kpi label="Putere max. absorbita" value={pMax != null ? `${pMax.toLocaleString("ro-RO", { maximumFractionDigits: 2 })} kW` : "—"} />
         <Kpi label="Doze" value={String(q.inventory.pointsTotal)} />
         <Kpi label="Circuite" value={String(nCircuits)} />
