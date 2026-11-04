@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+body {
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #0f172a;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+/* pagini in format landscape (schema monofilara a tablourilor mari) */
+@page landscape {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  html {
+    font-size: 10pt;
+  }
+  body {
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  /* cardurile devin sectiuni simple de document */
+  section {
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin-bottom: 4mm;
+  }
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+  table {
+    min-width: 0 !important;
+    width: 100% !important;
+    border-collapse: collapse;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr,
+  li,
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+  /* campurile de formular se tiparesc ca text */
+  input,
+  select,
+  textarea {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  svg {
+    max-width: 100% !important;
+    height: auto;
+  }
+  .print-page {
+    break-before: page;
+  }
+  .print-landscape {
+    page: landscape;
+  }
+}
