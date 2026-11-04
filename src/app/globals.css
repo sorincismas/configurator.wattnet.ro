@@ -1,26 +1,100 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-ink: #14181f;
+  --color-ink-2: #4a5260;
+  --color-ink-3: #8a919c;
+  --color-paper: #f6f5f1;
+  --color-paper-2: #eceae4;
+  --color-line: #dcd9d1;
+  --color-volt: #f2c200;
+  --color-ok: #1f7a4d;
+  --color-warn: #b86a00;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Consolas", "SFMono-Regular", Menlo, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* tabele dense */
+table.dense th {
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 6px 8px;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+table.dense td {
+  border-bottom: 1px solid var(--color-paper-2);
+  padding: 4px 8px;
+  vertical-align: middle;
+}
+table.dense tr:last-child td {
+  border-bottom: 0;
+}
+table.dense td.num,
+table.dense th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* diferentiere vizuala estimat / masurat / confirmat (spec 2.3, 17) */
+.tracked.val-estimated input {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--color-warn) 55%, white);
+  font-style: italic;
+}
+.tracked.val-measured input {
+  border-color: color-mix(in srgb, var(--color-ok) 60%, white);
+  background: color-mix(in srgb, var(--color-ok) 5%, white);
+}
+.tracked.val-confirmed input {
+  border-color: var(--color-ink-3);
+}
+
+.v-estimated {
+  color: var(--color-warn);
+  font-style: italic;
+}
+.v-measured {
+  color: var(--color-ok);
+}
+.v-unknown {
+  color: var(--color-ink-3);
+}
+
+/* bara de sumar - un singur rand, defilare orizontala */
+.summary-scroll {
+  scrollbar-width: thin;
+}
+.summary-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.summary-scroll::-webkit-scrollbar-thumb {
+  background: #3a4150;
+  border-radius: 2px;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    background: white;
+  }
 }

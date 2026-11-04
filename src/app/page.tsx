@@ -1,69 +1,93 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useApp } from "@/lib/store/store";
+import { downloadJSON, projectFileName, projectToFile } from "@/lib/io/files";
+import { fmtDate, timeAgo } from "@/lib/format";
+import { Badge, Button, Card, ConfirmButton, Empty, PageHeader, Select, Table } from "@/components/ui";
+import { ImportPanel } from "@/components/io/ImportPanel";
 
-export default function Home() {
+const STATUS: Record<string, string> = { ciorna: "Ciorna", ofertat: "Ofertat", in_executie: "In executie", finalizat: "Finalizat", anulat: "Anulat" };
+
+export default function ProjectsPage() {
+  const { projects, order, activeId, library, createProject, setActive, deleteProject, duplicateProject, markExported } = useApp();
+  const [tpl, setTpl] = useState<string>("tpl-ap3");
+  const router = useRouter();
+  const list = order.map((id) => projects[id]).filter(Boolean);
+
+  const exportProject = (id: string) => {
+    const p = projects[id];
+    downloadJSON(projectToFile(p), projectFileName(p));
+    markExported(id);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="max-w-6xl">
+      <PageHeader title="Proiecte" subtitle="Proiectele sunt salvate automat in acest browser. Exporta in fisier JSON ca sa continui pe alt calculator sau ca backup." />
+
+      <div className="mb-6 grid gap-4 md:grid-cols-2">
+        <Card title="Proiect nou">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-56 flex-1">
+              <Select value={tpl} onChange={setTpl} options={library.templates.map((t) => ({ value: t.id, label: t.name }))} />
+            </div>
+            <Button variant="primary" onClick={() => { createProject(tpl); router.push("/proiect"); }}>
+              Creeaza proiect
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-ink-3">Sablonul creeaza nivelurile si incaperile tipice; totul se poate modifica. Proiectul primeste o copie a bibliotecii curente ({library.meta.version}).</p>
+        </Card>
+        <Card title="Import">
+          <ImportPanel />
+          <p className="mt-2 text-xs text-ink-3">Accepta fisiere de proiect (.wattnet.json) si de biblioteca (.wattnet-lib.json).</p>
+        </Card>
+      </div>
+
+      {list.length === 0 ? (
+        <Empty title="Nu exista proiecte in acest browser">Creeaza un proiect nou sau importa un fisier JSON.</Empty>
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <th>Cod</th>
+              <th>Denumire</th>
+              <th>Beneficiar</th>
+              <th>Stare</th>
+              <th>Modificat</th>
+              <th>Fisier JSON</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((p) => {
+              const unsaved = !p.lastExportedAt || p.updatedAt > p.lastExportedAt;
+              return (
+                <tr key={p.id} className={p.id === activeId ? "bg-volt/10" : ""}>
+                  <td className="font-mono text-xs font-semibold">{p.info.code}</td>
+                  <td>
+                    <button className="text-left font-medium hover:underline" onClick={() => { setActive(p.id); router.push("/proiect"); }}>
+                      {p.info.name}
+                    </button>
+                    <div className="text-xs text-ink-3">{p.rooms.length} incaperi · {p.circuits.length} circuite</div>
+                  </td>
+                  <td className="text-sm">{p.info.client.name || <span className="text-ink-3">—</span>}</td>
+                  <td><Badge>{STATUS[p.info.status] ?? p.info.status}</Badge></td>
+                  <td className="text-xs text-ink-2" title={fmtDate(p.updatedAt)}>{timeAgo(p.updatedAt)}</td>
+                  <td>{unsaved ? <Badge tone="warn">neexportat</Badge> : <Badge tone="ok">exportat {timeAgo(p.lastExportedAt)}</Badge>}</td>
+                  <td>
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" onClick={() => { setActive(p.id); router.push("/proiect"); }}>Deschide</Button>
+                      <Button size="sm" onClick={() => exportProject(p.id)}>Export JSON</Button>
+                      <Button size="sm" variant="ghost" onClick={() => duplicateProject(p.id)} title="Copie ca proiect nou, fara date client">Duplica</Button>
+                      <ConfirmButton onConfirm={() => deleteProject(p.id)} label="Sterge definitiv">Sterge</ConfirmButton>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
+      )}
     </div>
   );
 }
