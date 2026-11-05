@@ -388,10 +388,23 @@ export interface PanelItem {
   circuitIds: ID[];
   /** elemente din aval (pentru RCD: MCB-urile protejate) */
   downstreamItemIds: ID[];
-  row: number;
+  /** randul fixat manual (0-based); null = asezare automata */
+  row: number | null;
   /** pozitie in modul pe sina (0-based); null = auto */
   position: number | null;
   isSpare: boolean;
+  /** rolul in tablou */
+  role?: "general" | "rcd" | "circuit" | "feeder" | "spd" | "rezerva" | "altul";
+  /** pentru role = feeder: tabloul secundar alimentat */
+  feedsPanelId?: ID | null;
+}
+
+export interface PanelOptions {
+  /** aparat general la intrare */
+  mainDevice: "separator" | "mcb" | "rcd" | "niciunul";
+  includeSPD: boolean;
+  /** circuitele finale trec prin intrerupatoare diferentiale */
+  useRcd: boolean;
 }
 
 export interface Panel {
@@ -405,6 +418,7 @@ export interface Panel {
   enclosureTypeId: ID | null;
   /** procent rezerva dorita din module */
   reservePct: number;
+  options?: PanelOptions;
   items: PanelItem[];
   status: DataStatus;
   notes: string;
@@ -841,6 +855,8 @@ export interface Library {
     version: string;
     updatedAt: ISODate;
     notes: string;
+    /** revizia elementelor implicite incluse (pentru completarea la actualizarea aplicatiei) */
+    defaultsRev?: number;
   };
   firm: FirmSettings;
   roomTypes: RoomType[];
