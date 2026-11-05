@@ -23,4 +23,4 @@ export const NAV: NavItem[] = [
   { href: "/biblioteca", label: "Biblioteca", stage: 1, needsProject: false, group: "Setari" },
 ];
 
-export const CURRENT_STAGE = 2;
+export const CURRENT_STAGE = 3;

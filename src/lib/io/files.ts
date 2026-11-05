@@ -4,7 +4,7 @@
  * structura si se aplica migrarile necesare.
  */
 import { z } from "zod";
-import { createDefaultLibrary } from "../library/default-library";
+import { createDefaultLibrary, DEFAULTS_REV } from "../library/default-library";
 import { uid } from "../model/ids";
 import { nowISO, projectCode } from "../model/factory";
 import { SCHEMA_VERSION, type Library, type LibraryFile, type Project, type ProjectFile } from "../model/types";
@@ -54,9 +54,24 @@ const libraryFileShape = z.object({ format: z.literal("wattnet-biblioteca"), sch
 export function migrateLibrary(input: Partial<Library>): Library {
   const def = createDefaultLibrary();
   const out = { ...def, ...input } as Library;
-  if (Array.isArray(input.rules)) for (const r of def.rules) if (!out.rules.some((x) => x.id === r.id)) out.rules.push(r);
+  // elemente noi adaugate de aplicatie: se completeaza o singura data, pe revizie
+  // (daca utilizatorul sterge ulterior un element, acesta nu mai revine)
+  const rev = input.meta?.defaultsRev ?? 1;
+  if (rev < DEFAULTS_REV) {
+    const keys = ["rules", "protectionDevices", "materials", "cableTypes", "conduitTypes", "boxTypes", "deviceTypes", "circuitTypes", "enclosureTypes", "difficultyFactors"] as const;
+    for (const k of keys) {
+      const cur = (Array.isArray(out[k]) ? out[k] : []) as { id: string }[];
+      for (const item of def[k] as { id: string }[]) if (!cur.some((x) => x.id === item.id)) cur.push(structuredClone(item));
+      (out as unknown as Record<string, unknown>)[k] = cur;
+    }
+    // regulile existente cu referinte provizorii primesc textul nou
+    for (const r of out.rules) {
+      const d = def.rules.find((x) => x.id === r.id);
+      if (d && r.validation === "de_validat" && (r.reference.startsWith("de completat") || r.id === "r-sectiune-min")) Object.assign(r, { title: d.title, reference: d.reference, params: d.params, conditions: d.conditions });
+    }
+  }
   out.firm = { ...def.firm, ...(input.firm ?? {}) };
-  out.meta = { ...def.meta, ...(input.meta ?? {}) };
+  out.meta = { ...def.meta, ...(input.meta ?? {}), defaultsRev: DEFAULTS_REV };
   for (const k of Object.keys(def) as (keyof Library)[]) {
     if (Array.isArray(def[k]) && !Array.isArray(out[k])) (out as unknown as Record<string, unknown>)[k] = def[k];
   }
@@ -66,9 +81,6 @@ export function migrateLibrary(input: Partial<Library>): Library {
 export function migrateProject(input: Project): Project {
   const p = structuredClone(input);
   p.library = migrateLibrary(p.library);
-  // reguli adaugate ulterior in biblioteca implicita
-  const defRules = createDefaultLibrary().rules;
-  for (const r of defRules) if (!p.library.rules.some((x) => x.id === r.id)) p.library.rules.push(r);
   for (const d of p.devices ?? []) {
     d.circuitLocked ??= false;
     d.junctionBoxId ??= null;

@@ -33,6 +33,8 @@ import type {
 } from "../model/types";
 
 export const DEFAULT_LIBRARY_VERSION = "2026.11-exemplu";
+/** creste cand aplicatia adauga elemente noi in biblioteca implicita */
+export const DEFAULTS_REV = 3;
 
 export const firm: FirmSettings = {
   name: "WATTNET",
@@ -151,6 +153,13 @@ const materials: Material[] = [
   M("mat-rcd-sne-2p40", "", "Intrerupator diferential 2P 40A 30mA tip A", "protectii", "Schneider", "buc", 160),
   M("mat-rcd-sne-4p40", "", "Intrerupator diferential 4P 40A 30mA tip A", "protectii", "Schneider", "buc", 260),
   M("mat-spd-2p", "", "Descarcator supratensiuni 1P+N T2", "protectii", "Schneider", "buc", 210),
+  M("mat-spd-4p", "", "Descarcator supratensiuni 3P+N T2", "protectii", "Schneider", "buc", 420),
+  M("mat-sep-4p63", "", "Separator 4P 63A", "protectii", "Schneider", "buc", 110),
+  M("mat-rcd-sch-2p63", "", "Intrerupator diferential 2P 63A 30mA tip A", "protectii", "Schrack", "buc", 190),
+  M("mat-rcd-sch-4p63", "", "Intrerupator diferential 4P 63A 30mA tip A", "protectii", "Schrack", "buc", 290),
+  M("mat-cyyf3x10", "", "Cablu CYY-F 3x10", "cabluri", "", "m", 23.0),
+  M("mat-cyyf5x4", "", "Cablu CYY-F 5x4", "cabluri", "", "m", 15.5),
+  M("mat-fy10", "", "Conductor FY 10 mm2", "cabluri", "", "m", 6.5),
   M("mat-sep-2p63", "", "Separator 2P 63A", "protectii", "Schneider", "buc", 60),
   // accesorii tablou
   M("mat-pieptene", "", "Bara pieptene 1P+N (12 module)", "accesorii", "", "buc", 25),
@@ -248,7 +257,10 @@ const cableTypes: CableType[] = [
   C("ct-cyyf3x25", "CYY-F 3x2,5", "cablu", 3, 2, 2.5, "mat-cyyf3x25", 1),
   C("ct-cyyf3x4", "CYY-F 3x4", "cablu", 3, 2, 4, "mat-cyyf3x4", 1),
   C("ct-cyyf3x6", "CYY-F 3x6", "cablu", 3, 2, 6, "mat-cyyf3x6", 1),
+  C("ct-fy3x10", "FY 3x10", "fire_in_tub", 3, 2, 10, "mat-fy10", 3),
+  C("ct-cyyf3x10", "CYY-F 3x10", "cablu", 3, 2, 10, "mat-cyyf3x10", 1),
   C("ct-cyyf5x25", "CYY-F 5x2,5", "cablu", 5, 3, 2.5, "mat-cyyf5x25", 1),
+  C("ct-cyyf5x4", "CYY-F 5x4", "cablu", 5, 3, 4, "mat-cyyf5x4", 1),
   C("ct-cyyf5x6", "CYY-F 5x6", "cablu", 5, 3, 6, "mat-cyyf5x6", 1),
   C("ct-cyyf5x10", "CYY-F 5x10", "cablu", 5, 3, 10, "mat-cyyf5x10", 1),
 ];
@@ -293,6 +305,17 @@ const protectionDevices: ProtectionDevice[] = [
   P({ id: "pd-sne-c20", kind: "MCB", brand: "Schneider", name: "MCB 1P+N C20", poles: "1P+N", ratingA: 20, curve: "C", modules: 2, materialId: "mat-mcb-sne-c20" }),
   P({ id: "pd-sne-rcd2p40", kind: "RCD", brand: "Schneider", name: "RCD 2P 40A 30mA tip A", poles: "2P", ratingA: 40, sensitivityMA: 30, rcdType: "A", modules: 2, materialId: "mat-rcd-sne-2p40" }),
   P({ id: "pd-sne-rcd4p40", kind: "RCD", brand: "Schneider", name: "RCD 4P 40A 30mA tip A", poles: "4P", ratingA: 40, sensitivityMA: 30, rcdType: "A", modules: 4, materialId: "mat-rcd-sne-4p40" }),
+  P({ id: "pd-sch-c40", kind: "MCB", brand: "Schrack", name: "MCB 1P+N C40", poles: "1P+N", ratingA: 40, curve: "C", modules: 2, materialId: "mat-mcb-sch-c32" }),
+  P({ id: "pd-sch-b16", kind: "MCB", brand: "Schrack", name: "MCB 1P+N B16", poles: "1P+N", ratingA: 16, curve: "B", modules: 2, materialId: "mat-mcb-sch-c16" }),
+  P({ id: "pd-sch-3c20", kind: "MCB", brand: "Schrack", name: "MCB 3P+N C20", poles: "3P+N", ratingA: 20, curve: "C", modules: 4, materialId: "mat-mcb-sch-3c16" }),
+  P({ id: "pd-sch-3c25", kind: "MCB", brand: "Schrack", name: "MCB 3P+N C25", poles: "3P+N", ratingA: 25, curve: "C", modules: 4, materialId: "mat-mcb-sch-3c16" }),
+  P({ id: "pd-sch-3c40", kind: "MCB", brand: "Schrack", name: "MCB 3P+N C40", poles: "3P+N", ratingA: 40, curve: "C", modules: 4, materialId: "mat-mcb-sch-3c32" }),
+  P({ id: "pd-sch-rcd2p25", kind: "RCD", brand: "Schrack", name: "RCD 2P 25A 30mA tip A", poles: "2P", ratingA: 25, sensitivityMA: 30, rcdType: "A", modules: 2, materialId: "mat-rcd-sch-2p40" }),
+  P({ id: "pd-sch-rcd2p63", kind: "RCD", brand: "Schrack", name: "RCD 2P 63A 30mA tip A", poles: "2P", ratingA: 63, sensitivityMA: 30, rcdType: "A", modules: 2, materialId: "mat-rcd-sch-2p63" }),
+  P({ id: "pd-sch-rcd4p25", kind: "RCD", brand: "Schrack", name: "RCD 4P 25A 30mA tip A", poles: "4P", ratingA: 25, sensitivityMA: 30, rcdType: "A", modules: 4, materialId: "mat-rcd-sch-4p40" }),
+  P({ id: "pd-sch-rcd4p63", kind: "RCD", brand: "Schrack", name: "RCD 4P 63A 30mA tip A", poles: "4P", ratingA: 63, sensitivityMA: 30, rcdType: "A", modules: 4, materialId: "mat-rcd-sch-4p63" }),
+  P({ id: "pd-sne-sep4p63", kind: "separator", brand: "Schneider", name: "Separator 4P 63A", poles: "4P", ratingA: 63, modules: 4, breakingCapacityKA: null, materialId: "mat-sep-4p63" }),
+  P({ id: "pd-sne-spd4p", kind: "SPD", brand: "Schneider", name: "SPD 3P+N tip 2", poles: "3P+N", modules: 4, breakingCapacityKA: null, materialId: "mat-spd-4p" }),
   P({ id: "pd-sne-spd", kind: "SPD", brand: "Schneider", name: "SPD 1P+N tip 2", poles: "1P+N", modules: 2, breakingCapacityKA: null, materialId: "mat-spd-2p" }),
   P({ id: "pd-sne-sep2p63", kind: "separator", brand: "Schneider", name: "Separator 2P 63A", poles: "2P", ratingA: 63, modules: 2, breakingCapacityKA: null, materialId: "mat-sep-2p63" }),
 ];
@@ -386,12 +409,18 @@ const R = (r: Partial<TechnicalRule> & Pick<TechnicalRule, "id" | "code" | "titl
 const rules: TechnicalRule[] = [
   R({ id: "r-ib-iz", code: "R001", title: "Curentul de calcul nu depaseste curentul admisibil corectat (Ic <= I'z)", classification: "cerinta_normativa", reference: "art. 5.2.4.1.2", conditions: "Pentru toate circuitele cu putere cunoscuta." }),
   R({ id: "r-iz-corectat", code: "R002", title: "Curent admisibil corectat I'z = Iz x K1 x K2", classification: "cerinta_normativa", reference: "anexele 5.10, 5.18, 5.19, 5.30", conditions: "Metoda de pozare, temperatura ambianta si gruparea trebuie cunoscute." }),
-  R({ id: "r-sectiune-min", code: "R003", title: "Sectiuni minime pentru circuite fixe (cupru)", classification: "cerinta_normativa", reference: "anexa 5.32", params: { cuPowerMinMm2: 1.5 }, notes: "Valoarea pentru circuite de putere/iluminat se confirma din anexa 5.32." }),
+  R({ id: "r-sectiune-min", code: "R003", title: "Sectiuni minime conductoare de faza (cupru): iluminat 1,5; prize monofazate 2,5; putere 1,5; coloane monofazate locuinte 4 mm2", classification: "cerinta_normativa", reference: "anexa 5.32 poz. 1.1-1.4", params: { lighting: 1.5, sockets: 2.5, power: 1.5, feederMono: 4 } }),
   R({ id: "r-du", code: "R004", title: "Caderea de tensiune admisibila (alimentare din bransament JT)", classification: "cerinta_normativa", reference: "art. 5.2.5.1", params: { lightingPct: 3, otherPct: 5 }, conditions: "Alimentare din cofret de bransament JT; pe traseul cel mai lung si mai incarcat. Pentru PT/centrala proprie: 6% / 8% (art. 5.2.5.2)." }),
   R({ id: "r-n-comun", code: "R009", title: "Conductorul neutru nu poate fi comun pentru mai multe circuite", classification: "cerinta_normativa", reference: "art. 5.2.4.6.4" }),
   R({ id: "r-conexiuni-doze", code: "R010", title: "Legaturile intre conductoare se fac numai in accesorii prevazute (doze, cutii)", classification: "cerinta_normativa", reference: "art. 5.2.6.4" }),
   R({ id: "r-coord-prot", code: "R005", title: "Coordonare protectie - conductor: Ib <= In <= I'z", classification: "standard_tehnic", reference: "SR HD 60364-4-43 / I7-2011 cap. 5", conditions: "Pentru protectia la suprasarcina." }),
-  R({ id: "r-rcd-prize", code: "R006", title: "Protectie diferentiala 30 mA pentru circuitele de prize", classification: "cerinta_normativa", reference: "de completat (I7-2011 cap. 4)", notes: "Referinta exacta se completeaza la validare." }),
+  R({ id: "r-rcd-prize", code: "R006", title: "In locuinte, protectia prin dispozitive diferentiale (DDR) este masura tehnica principala", classification: "cerinta_normativa", reference: "art. 5.3.4.1.2.3 (HG 1146/2006)", params: { maxSensitivityMA: 30 }, conditions: "Toate circuitele finale din locuinte; 30 mA pentru prize si circuite cu risc marit." }),
+  R({ id: "r-iluminat-distinct", code: "R014", title: "Circuitele iluminatului normal sunt distincte de circuitele de prize", classification: "cerinta_normativa", reference: "art. 5.4.1" }),
+  R({ id: "r-iluminat-putere", code: "R015", title: "Putere instalata recomandata pe circuit de iluminat: max 3 kW monofazat / 8 kW trifazat", classification: "recomandare", reference: "art. 5.4.5", params: { monoKW: 3, triKW: 8 } }),
+  R({ id: "r-receptor-2kw", code: "R016", title: "In locuinte, receptoarele peste 2 kW au circuit de priza separat", classification: "cerinta_normativa", reference: "art. 5.4.7", params: { maxKW: 2 } }),
+  R({ id: "r-putere-disponibila", code: "R017", title: "Puterea aplicata a instalatiei nu depaseste puterea disponibila (aprobata / protectia generala)", classification: "standard_tehnic", reference: "conditie de alimentare (ATR / BMPT)", source: "WATTNET", version: "1", conditions: "Puterea aplicata include simultaneitatea pe circuite si cea globala." }),
+  R({ id: "r-circuit-tablou", code: "R018", title: "Fiecare circuit final este alimentat dintr-un tablou si are protectie proprie", classification: "conventie_wattnet", reference: "conventie interna", source: "WATTNET", version: "1" }),
+  R({ id: "r-rcd-grupare", code: "R013", title: "Numar maxim de circuite pe un intrerupator diferential (la echiparea automata)", classification: "conventie_wattnet", reference: "conventie interna", source: "WATTNET", version: "1", params: { maxCircuits: 6 } }),
   R({ id: "r-echilibrare", code: "R007", title: "Echilibrarea sarcinilor pe faze (abatere maxima recomandata)", classification: "conventie_wattnet", reference: "conventie interna", source: "WATTNET", version: "1", params: { maxImbalancePct: 20 } }),
   R({ id: "r-incarcare-grupare", code: "R011", title: "Incarcare maxima la gruparea automata a punctelor pe circuit", classification: "conventie_wattnet", reference: "conventie interna", source: "WATTNET", version: "1", params: { maxLoadPct: 80 }, notes: "Puterea aplicata a circuitului (P instalata x ks) nu depaseste acest procent din In x U x cos φ. Nu inlocuieste verificarea circuitului." }),
   R({ id: "r-rezerva-cablu", code: "R012", title: "Rezerva de cablu la capete (doze, tablou)", classification: "conventie_wattnet", reference: "conventie interna", source: "WATTNET", version: "1", params: { reserveM: 1 } }),
@@ -544,6 +573,7 @@ export function createDefaultLibrary(): Library {
       version: DEFAULT_LIBRARY_VERSION,
       updatedAt: new Date().toISOString(),
       notes: "Valori exemplu. Actualizeaza tarifele, timpii si preturile, apoi exporta biblioteca.",
+      defaultsRev: DEFAULTS_REV,
     },
     firm,
     roomTypes,
