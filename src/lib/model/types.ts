@@ -467,8 +467,22 @@ export interface QuoteScope {
   levelIds: ID[];
 }
 
+export interface ProformaSettings {
+  /** numarul atribuit (ex. WN 0007); null = neatribuit */
+  number: string | null;
+  issueDate: ISODate | null;
+  dueDays: number;
+  /** procent din total cerut prin proforma (avans) */
+  advancePct: number;
+  notes: string;
+}
+
 export interface QuoteSettings {
   scope?: QuoteScope;
+  offerDate?: ISODate | null;
+  proforma?: ProformaSettings;
+  /** observatii pentru client pe documente */
+  clientNotes?: string;
   includeMaterials: boolean;
   /** discount procentual pe manopera */
   laborDiscountPct: number;
@@ -626,6 +640,17 @@ export interface FirmSettings {
   vatPayer: boolean;
   vatRatePct: number;
   currency: string;
+  /** banca (pentru proforma) */
+  bank: string;
+  /** mentiune TVA pe documente cand firma nu este platitoare */
+  vatNote: string;
+  /** seria si urmatorul numar pentru facturile proforma */
+  proformaSeries: string;
+  proformaNext: number;
+  /** termen de plata implicit (zile) */
+  paymentTermsDays: number;
+  /** text implicit de conditii comerciale pe oferta */
+  offerTerms: string;
 }
 
 export interface RoomType {

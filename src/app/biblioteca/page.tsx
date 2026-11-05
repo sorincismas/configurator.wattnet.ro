@@ -457,7 +457,7 @@ function FirmTab({ lib, updateLib }: { lib: Library; updateLib: (r: (l: Library)
   const ref = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState<string | null>(null);
   return (
-    <Card title="Date firma" subtitle="Apar pe coperta dosarului, in oferta si in cartusul schemelor. Preluate initial de pe wattnet.ro - completeaza CUI, Reg. Com. si adresa.">
+    <Card title="Date firma" subtitle="Apar in oferta, proforma, dosar si cartusul schemelor - comune tuturor proiectelor. Preluate initial de pe wattnet.ro: completeaza CUI, Reg. Com., adresa, IBAN.">
       <div className="grid gap-3 md:grid-cols-3">
         <Field label="Nume comercial"><TextInput value={f.name} onChange={(v) => set("name", v)} /></Field>
         <Field label="Denumire legala"><TextInput value={f.legalName} onChange={(v) => set("legalName", v)} /></Field>
@@ -465,6 +465,7 @@ function FirmTab({ lib, updateLib }: { lib: Library; updateLib: (r: (l: Library)
         <Field label="CUI"><TextInput value={f.cui} onChange={(v) => set("cui", v)} /></Field>
         <Field label="Nr. Reg. Com."><TextInput value={f.regCom} onChange={(v) => set("regCom", v)} /></Field>
         <Field label="IBAN"><TextInput value={f.iban} onChange={(v) => set("iban", v)} /></Field>
+        <Field label="Banca"><TextInput value={f.bank} onChange={(v) => set("bank", v)} /></Field>
         <Field label="Adresa" className="md:col-span-3"><TextInput value={f.address} onChange={(v) => set("address", v)} /></Field>
         <Field label="Email"><TextInput value={f.email} onChange={(v) => set("email", v)} /></Field>
         <Field label="Telefon"><TextInput value={f.phone} onChange={(v) => set("phone", v)} /></Field>
@@ -481,7 +482,11 @@ function FirmTab({ lib, updateLib }: { lib: Library; updateLib: (r: (l: Library)
             {f.vatPayer && <NumberInput className="w-24" value={f.vatRatePct} suffix="%" onChange={(v) => set("vatRatePct", v ?? 0)} />}
             <TextInput className="w-20" value={f.currency} onChange={(v) => set("currency", v)} />
           </div>
-          {!f.vatPayer && <p className="mt-2 text-xs text-ink-3">Ofertele vor mentiona „Firma neplatitoare de TVA”.</p>}
+          {!f.vatPayer && (
+            <Field label="Mentiune pe documente" className="mt-2" hint="verifica formularea cu contabilul firmei">
+              <TextInput value={f.vatNote} onChange={(v) => set("vatNote", v)} />
+            </Field>
+          )}
         </div>
         <div className="rounded-md border border-line p-3">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Sigla</p>
@@ -509,6 +514,14 @@ function FirmTab({ lib, updateLib }: { lib: Library; updateLib: (r: (l: Library)
           <p className="mt-2 text-xs text-ink-3">Pe wattnet.ro sigla nu este publicata ca imagine; incarca fisierul PNG/SVG. Sigla se salveaza in biblioteca si in exportul JSON.</p>
         </div>
       </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <Field label="Serie proforma"><TextInput value={f.proformaSeries} onChange={(v) => set("proformaSeries", v)} /></Field>
+        <Field label="Urmatorul numar proforma"><NumberInput value={f.proformaNext} onChange={(v) => set("proformaNext", Math.max(1, Math.round(v ?? 1)))} /></Field>
+        <Field label="Termen de plata implicit"><NumberInput value={f.paymentTermsDays} suffix="zile" onChange={(v) => set("paymentTermsDays", Math.max(0, v ?? 5))} /></Field>
+      </div>
+      <Field label="Conditii comerciale implicite pe oferta" className="mt-3">
+        <TextArea rows={2} value={f.offerTerms} onChange={(v) => set("offerTerms", v)} />
+      </Field>
       <Field label="Note biblioteca" className="mt-4">
         <TextArea rows={2} value={lib.meta.notes} onChange={(v) => updateLib((l) => void (l.meta.notes = v))} />
       </Field>

@@ -54,6 +54,12 @@ export const firm: FirmSettings = {
   vatPayer: false,
   vatRatePct: 21,
   currency: "lei",
+  bank: "",
+  vatNote: "Furnizor neplatitor de TVA",
+  proformaSeries: "WN",
+  proformaNext: 1,
+  paymentTermsDays: 5,
+  offerTerms: "Plata: avans conform facturii proforma, diferenta la finalizarea lucrarii. Lucrarile suplimentare fata de prezenta oferta se ofera separat.",
 };
 
 const roomTypes: RoomType[] = [

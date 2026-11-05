@@ -56,6 +56,6 @@ Pe Vercel: framework Next.js, comanda `npm run build`, director de iesire `out` 
 | 1 Fundatie | proiecte, alimentare, cladiri/niveluri/incaperi, identificatori, biblioteca, bara sumar, JSON | **gata** |
 | 2 Model instalatie | doze DA/DD, aparate, consumatori, circuite, trasee, copex, cabluri | **gata** |
 | 3 Tablouri si calcule | dimensionare asistata I7, tablouri, vedere DIN, schema monofilara, verificari | **gata** |
-| 4 Deviz si timp | deviz manopera / + materiale, subtotaluri, tarif orar implicit | motor gata |
+| 4 Deviz si timp | deviz manopera / + materiale, subtotaluri, tarif orar implicit, oferta si proforma (simplificat / detaliat) | **gata** |
 | 5 Documentatie | dosar PDF 14 capitole, versiuni emise | |
 | 6 Plan executie | operatii, dependente, echipa, durata | motor initial |
