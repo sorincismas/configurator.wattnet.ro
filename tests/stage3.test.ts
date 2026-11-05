@@ -65,7 +65,9 @@ describe("propunere dimensionare", () => {
     const p = setup();
     add(p, "Bucatarie", "dt-plita", 5000);
     generateCircuits(p);
+    p.fast.cableFamily = "FY";
     const c = p.circuits.find((x) => x.usage === "dedicat")!;
+    c.installMethodId = "im-b1";
     c.estimatedLengthM = tracked(10);
     const prop = proposeSizing(p, c);
     expect(prop.ok).toBe(true);
@@ -80,7 +82,9 @@ describe("propunere dimensionare", () => {
     const p = setup();
     add(p, "Bucatarie", "dt-plita", 5000);
     generateCircuits(p);
+    p.fast.cableFamily = "FY";
     const c = p.circuits.find((x) => x.usage === "dedicat")!;
+    c.installMethodId = "im-b1";
     c.estimatedLengthM = tracked(60);
     expect(proposeSizing(p, c).cableTypeId).toBe("ct-fy3x6"); // 4 mm2: ΔU 5,06% > 5% respins
   });
@@ -93,7 +97,7 @@ describe("propunere dimensionare", () => {
     const prop = proposeSizing(p, c);
     expect(prop.ratingA).toBe(16);
     expect(prop.protectionDeviceId).not.toBeNull();
-    expect(prop.cableTypeId).toBe("ct-fy3x25"); // sectiune minima prize 2,5 mm2
+    expect(prop.cableTypeId).toBe("ct-nyyj3x25"); // sectiune minima prize 2,5 mm2, familia NYY-J a circuitului
   });
   it("fara putere => date insuficiente, nu se inventeaza", () => {
     const p = setup();
@@ -203,6 +207,8 @@ describe("verificari", () => {
     const p = setup();
     add(p, "Living", "dt-priza", 500);
     generateCircuits(p);
+    // fara estimarea rapida pe proiect lungimea ramane necunoscuta
+    (p as { fast?: unknown }).fast = undefined;
     expect(circuitChecks(p, p.circuits[0]).find((x) => x.ruleId === "r-du")!.result).toBe("date_insuficiente");
   });
   it("receptor > 2 kW pe circuit comun de prize => neconform (art. 5.4.7)", () => {

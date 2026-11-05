@@ -119,7 +119,7 @@ function PanelEditor({ p, panel, up, onDeleted }: { p: Project; panel: Panel; up
   return (
     <div className="space-y-4">
       <Card
-        title={<span className="flex items-center gap-2"><Code>{panel.code}</Code><TextInput className="w-64" value={panel.name} onChange={(v) => setP((t) => void (t.name = v))} /></span>}
+        title={<span className="flex items-center gap-2"><Code>{panel.code}</Code><TextInput className="w-44 sm:w-64" value={panel.name} onChange={(v) => setP((t) => void (t.name = v))} /></span>}
         actions={
           <>
             <span className="text-sm text-ink-2">P aplicata <b>{fmtNum(load.appliedW / 1000, 2)} kW</b> · Ic <b>{load.currentA === null ? NA : fmtNum(load.currentA, 1)} A</b></span>

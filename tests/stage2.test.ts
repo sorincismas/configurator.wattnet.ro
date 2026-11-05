@@ -43,8 +43,12 @@ describe("aparate si doze", () => {
     generateCircuits(p);
     expect(d.circuitId).toBeNull();
   });
-  it("puterea nu se impune automat", () => {
+  it("puterea din biblioteca este doar un consum mediu estimat, editabil", () => {
     const p = setup();
+    const d = newDevice(p, room(p, "Living").id, "dt-plita");
+    expect(d.powerW.value).toBe(7000);
+    expect(d.powerW.provenance).toBe("estimat");
+    p.library.deviceTypes.find((t) => t.id === "dt-plita")!.suggestedPowerW = null;
     expect(newDevice(p, room(p, "Living").id, "dt-plita").powerW.value).toBeNull();
   });
 });

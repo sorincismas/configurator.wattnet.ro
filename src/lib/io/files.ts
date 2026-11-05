@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { createDefaultLibrary, DEFAULTS_REV } from "../library/default-library";
 import { uid } from "../model/ids";
-import { nowISO, projectCode } from "../model/factory";
+import { defaultFastSettings, nowISO, projectCode } from "../model/factory";
 import { SCHEMA_VERSION, type Library, type LibraryFile, type Project, type ProjectFile } from "../model/types";
 
 export const APP_ID = "configurator.wattnet.ro@0.1";
@@ -64,6 +64,21 @@ export function migrateLibrary(input: Partial<Library>): Library {
       for (const item of def[k] as { id: string }[]) if (!cur.some((x) => x.id === item.id)) cur.push(structuredClone(item));
       (out as unknown as Record<string, unknown>)[k] = cur;
     }
+    if (rev < 5) {
+      // faza la rosu: cablu NYY-J ingropat direct ca implicit pe prize / iluminat (doar daca tipul era cel implicit vechi)
+      for (const c of out.circuitTypes) {
+        const d = def.circuitTypes.find((x) => x.id === c.id);
+        if (d && (c.defaultCableTypeId === "ct-fy3x15" || c.defaultCableTypeId === "ct-fy3x25")) {
+          c.defaultCableTypeId = d.defaultCableTypeId;
+          if (c.defaultInstallMethodId === "im-b1") c.defaultInstallMethodId = d.defaultInstallMethodId;
+        }
+      }
+      for (const t of out.deviceTypes) {
+        const d = def.deviceTypes.find((x) => x.id === t.id);
+        if (d?.shortcut && !t.shortcut) t.shortcut = d.shortcut;
+        if (d && t.suggestedPowerW === null && d.suggestedPowerW !== null) t.suggestedPowerW = d.suggestedPowerW;
+      }
+    }
     if (rev < 4) for (const o of out.operations) if (o.id === "op-conectare-circuit" && o.driver === "circuits") o.driver = "new_circuits";
     // regulile existente cu referinte provizorii primesc textul nou
     for (const r of out.rules) {
@@ -94,6 +109,8 @@ export function migrateProject(input: Project): Project {
   p.extraCosts ??= [];
   p.planOverrides ??= [];
   p.lastExportedAt ??= null;
+  // proiectele vechi foloseau copex: estimarea rapida se activeaza fara a schimba traseele existente
+  p.fast = { ...defaultFastSettings(false), ...(p.fast ?? {}) };
   p.schemaVersion = SCHEMA_VERSION;
   return p;
 }

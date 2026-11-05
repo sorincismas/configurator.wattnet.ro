@@ -30,6 +30,7 @@ const DRIVERS: { value: Operation["driver"]; label: string }[] = [
   { value: "circuits", label: "Circuite (toate)" },
   { value: "new_circuits", label: "Circuite noi" },
   { value: "existing_circuits", label: "Circuite existente (reconectate)" },
+  { value: "end_points", label: "Capete de legat (doze aparat + puncte fara doza)" },
   { value: "dd_connections", label: "Conexiuni in doze derivatie" },
   { value: "rooms", label: "Incaperi" },
 ];
@@ -291,7 +292,7 @@ export default function LibraryPage() {
       )}
 
       {tab === "aparate" && (
-        <Card title="Aparate, puncte si consumatori" subtitle="Puterea sugerata este optionala si editabila pe fiecare punct - aplicatia nu impune o putere standard. Curentii slabi nu primesc putere.">
+        <Card title="Aparate, puncte si consumatori" subtitle="Puterea este un consum mediu folosit la estimare (editabil si pe fiecare punct). Litera apare ca buton de adaugare rapida si in codul rapid (ex. 4P 2L 1I). Curentii slabi nu primesc putere.">
           <EditableTable<DeviceType>
             rows={lib.deviceTypes}
             {...listOps("deviceTypes")}
@@ -301,7 +302,25 @@ export default function LibraryPage() {
               { key: "category", label: "Categorie", type: "select", options: ["priza", "intrerupator", "iluminat", "consumator_dedicat", "curenti_slabi", "comanda", "altul"].map((v) => ({ value: v, label: v.replace("_", " ") })), width: "160px" },
               { key: "modules", label: "Module doza", type: "number", width: "90px" },
               { key: "needsBox", label: "In doza", type: "checkbox", width: "65px" },
-              { key: "suggestedPowerW", label: "Putere sugerata", type: "number", suffix: "W", width: "120px", nullable: true },
+              { key: "suggestedPowerW", label: "Consum mediu", type: "number", suffix: "W", width: "120px", nullable: true },
+              {
+                key: "shortcut",
+                label: "Litera",
+                type: "custom",
+                width: "60px",
+                render: (r) => (
+                  <input
+                    className="h-8 w-11 rounded-md border border-line px-1 text-center text-sm uppercase"
+                    maxLength={2}
+                    value={r.shortcut ?? ""}
+                    title="litera pentru adaugare rapida"
+                    onChange={(e) => {
+                      const v = e.target.value.toUpperCase().replace(/[^A-Z]/g, "");
+                      updateLib((l) => l.deviceTypes.forEach((d) => (d.id === r.id ? (d.shortcut = v || undefined) : v && d.shortcut === v ? (d.shortcut = undefined) : null)));
+                    }}
+                  />
+                ),
+              },
               { key: "threePhase", label: "Trifazat", type: "checkbox", width: "65px" },
               { key: "brand", label: "Producator", type: "text", width: "110px" },
               {
@@ -454,7 +473,7 @@ function OperationDetails({ lib, updateLib }: { lib: Library; updateLib: (r: (l:
     <div className="mt-4 rounded-md border border-line bg-paper p-3">
       <div className="mb-2 flex items-center gap-2">
         <span className="text-sm font-semibold">Subactiuni si dependente pentru</span>
-        <Select className="w-80" value={id} onChange={setId} options={lib.operations.map((o) => ({ value: o.id, label: `${o.code} ${o.name}` }))} />
+        <Select className="w-full sm:w-80" value={id} onChange={setId} options={lib.operations.map((o) => ({ value: o.id, label: `${o.code} ${o.name}` }))} />
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <Field label="Subactiuni (una pe rand)">

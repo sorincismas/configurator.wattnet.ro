@@ -34,7 +34,7 @@ import type {
 
 export const DEFAULT_LIBRARY_VERSION = "2026.11-exemplu";
 /** creste cand aplicatia adauga elemente noi in biblioteca implicita */
-export const DEFAULTS_REV = 4;
+export const DEFAULTS_REV = 5;
 
 export const firm: FirmSettings = {
   name: "WATTNET",
@@ -122,6 +122,16 @@ const materials: Material[] = [
   M("mat-cyyf5x25", "", "Cablu CYY-F 5x2,5", "cabluri", "", "m", 10.5),
   M("mat-cyyf5x6", "", "Cablu CYY-F 5x6", "cabluri", "", "m", 24.0),
   M("mat-cyyf5x10", "", "Cablu CYY-F 5x10", "cabluri", "", "m", 39.0),
+  M("mat-nyyj3x15", "", "Cablu NYY-J 3x1,5", "cabluri", "", "m", 4.0),
+  M("mat-nyyj3x25", "", "Cablu NYY-J 3x2,5", "cabluri", "", "m", 6.0),
+  M("mat-nyyj3x4", "", "Cablu NYY-J 3x4", "cabluri", "", "m", 9.5),
+  M("mat-nyyj3x6", "", "Cablu NYY-J 3x6", "cabluri", "", "m", 14.0),
+  M("mat-nyyj3x10", "", "Cablu NYY-J 3x10", "cabluri", "", "m", 22.0),
+  M("mat-nyyj5x15", "", "Cablu NYY-J 5x1,5", "cabluri", "", "m", 7.0),
+  M("mat-nyyj5x25", "", "Cablu NYY-J 5x2,5", "cabluri", "", "m", 10.0),
+  M("mat-nyyj5x4", "", "Cablu NYY-J 5x4", "cabluri", "", "m", 15.0),
+  M("mat-nyyj5x6", "", "Cablu NYY-J 5x6", "cabluri", "", "m", 23.0),
+  M("mat-nyyj5x10", "", "Cablu NYY-J 5x10", "cabluri", "", "m", 37.0),
   M("mat-utp6", "", "Cablu UTP Cat6", "curenti_slabi", "", "m", 2.2),
   // tuburi
   M("mat-copex16", "", "Tub copex 16 mm", "tuburi", "", "m", 0.9),
@@ -196,36 +206,42 @@ const D = (
   needsBox: boolean,
   suggestedPowerW: number | null = null,
   threePhase = false,
-): DeviceType => ({ id, name, category, modules, needsBox, suggestedPowerW, threePhase, brand: "", materialId: null });
+  shortcut?: string,
+): DeviceType => ({ id, name, category, modules, needsBox, suggestedPowerW, threePhase, brand: "", materialId: null, ...(shortcut ? { shortcut } : {}) });
 
+/*
+ * Puterile sunt CONSUMURI MEDII EXEMPLU pentru estimare (faza la rosu);
+ * se actualizeaza in Biblioteca si se corecteaza pe aparat unde se cunoaste puterea reala.
+ */
 const deviceTypes: DeviceType[] = [
-  D("dt-priza", "Priza simpla Schuko", "priza", 2, true),
-  D("dt-priza-dubla", "Priza dubla Schuko", "priza", 4, true),
-  D("dt-priza-ip", "Priza IP44 (baie / exterior)", "priza", 2, true),
-  D("dt-priza-usb", "Priza cu USB", "priza", 2, true),
-  D("dt-intr-simplu", "Intrerupator simplu", "intrerupator", 1, true),
+  D("dt-priza", "Priza simpla Schuko", "priza", 2, true, 300, false, "P"),
+  D("dt-priza-dubla", "Priza dubla Schuko", "priza", 4, true, 300, false, "D"),
+  D("dt-priza-ip", "Priza IP44 (baie / exterior)", "priza", 2, true, 300, false),
+  D("dt-priza-tv", "Priza alimentare TV", "priza", 2, true, 200, false, "T"),
+  D("dt-priza-usb", "Priza cu USB", "priza", 2, true, 100, false),
+  D("dt-intr-simplu", "Intrerupator simplu", "intrerupator", 1, true, null, false, "I"),
   D("dt-intr-dublu", "Intrerupator dublu", "intrerupator", 1, true),
-  D("dt-intr-cap", "Comutator cap-scara", "intrerupator", 1, true),
+  D("dt-intr-cap", "Comutator cap-scara", "intrerupator", 1, true, null, false, "C"),
   D("dt-intr-cruce", "Comutator cruce", "intrerupator", 1, true),
   D("dt-buton", "Buton / sonerie", "comanda", 1, true),
-  D("dt-il-plafon", "Punct iluminat plafon", "iluminat", 0, false),
-  D("dt-il-aplica", "Aplica perete", "iluminat", 0, false),
-  D("dt-il-spot", "Spot incastrat", "iluminat", 0, false),
-  D("dt-il-led", "Banda LED (alimentator)", "iluminat", 0, false),
-  D("dt-il-ext", "Iluminat exterior", "iluminat", 0, false),
-  D("dt-senzor", "Senzor miscare / prezenta", "comanda", 1, true),
-  D("dt-termostat", "Termostat", "comanda", 2, true),
-  D("dt-plita", "Plita electrica", "consumator_dedicat", 0, false),
-  D("dt-cuptor", "Cuptor electric", "consumator_dedicat", 0, false),
-  D("dt-masina-spalat", "Masina de spalat rufe", "consumator_dedicat", 0, false),
-  D("dt-uscator", "Uscator rufe", "consumator_dedicat", 0, false),
-  D("dt-masina-vase", "Masina de spalat vase", "consumator_dedicat", 0, false),
-  D("dt-ac", "Aer conditionat", "consumator_dedicat", 0, false),
-  D("dt-boiler", "Boiler electric", "consumator_dedicat", 0, false),
-  D("dt-centrala", "Centrala termica", "consumator_dedicat", 0, false),
-  D("dt-pompa-caldura", "Pompa de caldura", "consumator_dedicat", 0, false, null, true),
-  D("dt-statie-ev", "Statie incarcare auto", "consumator_dedicat", 0, false),
-  D("dt-hota", "Hota", "consumator_dedicat", 0, false),
+  D("dt-il-plafon", "Punct iluminat plafon", "iluminat", 0, false, 60, false, "L"),
+  D("dt-il-aplica", "Aplica perete", "iluminat", 0, false, 40, false, "A"),
+  D("dt-il-spot", "Spot incastrat", "iluminat", 0, false, 10, false, "S"),
+  D("dt-il-led", "Banda LED (alimentator)", "iluminat", 0, false, 50, false, "B"),
+  D("dt-il-ext", "Iluminat exterior", "iluminat", 0, false, 60, false),
+  D("dt-senzor", "Senzor miscare / prezenta", "comanda", 1, true, 5, false),
+  D("dt-termostat", "Termostat", "comanda", 2, true, 5, false),
+  D("dt-plita", "Plita electrica", "consumator_dedicat", 0, false, 7000, false),
+  D("dt-cuptor", "Cuptor electric", "consumator_dedicat", 0, false, 3500, false),
+  D("dt-masina-spalat", "Masina de spalat rufe", "consumator_dedicat", 0, false, 2200, false),
+  D("dt-uscator", "Uscator rufe", "consumator_dedicat", 0, false, 2500, false),
+  D("dt-masina-vase", "Masina de spalat vase", "consumator_dedicat", 0, false, 2000, false),
+  D("dt-ac", "Aer conditionat", "consumator_dedicat", 0, false, 1500, false),
+  D("dt-boiler", "Boiler electric", "consumator_dedicat", 0, false, 2000, false),
+  D("dt-centrala", "Centrala termica", "consumator_dedicat", 0, false, 150, false),
+  D("dt-pompa-caldura", "Pompa de caldura", "consumator_dedicat", 0, false, 6000, true),
+  D("dt-statie-ev", "Statie incarcare auto", "consumator_dedicat", 0, false, 7400, false),
+  D("dt-hota", "Hota", "consumator_dedicat", 0, false, 250, false),
   D("dt-rj45", "Priza date RJ45", "curenti_slabi", 2, true),
   D("dt-tv", "Priza TV coaxial", "curenti_slabi", 1, true),
   D("dt-alarma", "Punct alarma / interfon", "curenti_slabi", 0, false),
@@ -255,6 +271,16 @@ const C = (
 });
 
 const cableTypes: CableType[] = [
+  C("ct-nyyj3x15", "NYY-J 3x1,5", "cablu", 3, 2, 1.5, "mat-nyyj3x15", 1),
+  C("ct-nyyj3x25", "NYY-J 3x2,5", "cablu", 3, 2, 2.5, "mat-nyyj3x25", 1),
+  C("ct-nyyj3x4", "NYY-J 3x4", "cablu", 3, 2, 4, "mat-nyyj3x4", 1),
+  C("ct-nyyj3x6", "NYY-J 3x6", "cablu", 3, 2, 6, "mat-nyyj3x6", 1),
+  C("ct-nyyj3x10", "NYY-J 3x10", "cablu", 3, 2, 10, "mat-nyyj3x10", 1),
+  C("ct-nyyj5x15", "NYY-J 5x1,5", "cablu", 5, 3, 1.5, "mat-nyyj5x15", 1),
+  C("ct-nyyj5x25", "NYY-J 5x2,5", "cablu", 5, 3, 2.5, "mat-nyyj5x25", 1),
+  C("ct-nyyj5x4", "NYY-J 5x4", "cablu", 5, 3, 4, "mat-nyyj5x4", 1),
+  C("ct-nyyj5x6", "NYY-J 5x6", "cablu", 5, 3, 6, "mat-nyyj5x6", 1),
+  C("ct-nyyj5x10", "NYY-J 5x10", "cablu", 5, 3, 10, "mat-nyyj5x10", 1),
   C("ct-fy3x15", "FY 3x1,5", "fire_in_tub", 3, 2, 1.5, "mat-fy15", 3),
   C("ct-fy3x25", "FY 3x2,5", "fire_in_tub", 3, 2, 2.5, "mat-fy25", 3),
   C("ct-fy3x4", "FY 3x4", "fire_in_tub", 3, 2, 4, "mat-fy4", 3),
@@ -347,11 +373,11 @@ const installMethods: InstallMethod[] = [
 ];
 
 const circuitTypes: CircuitType[] = [
-  { id: "ctp-iluminat", name: "Iluminat", usage: "iluminat", defaultCableTypeId: "ct-fy3x15", defaultRatingA: 10, defaultCurve: "C", defaultSimultaneity: 0.8, defaultInstallMethodId: "im-b1", note: "Setare initiala editabila (10 A / 3x1,5 mm2); se verifica pe circuit." },
-  { id: "ctp-prize", name: "Prize generale", usage: "prize", defaultCableTypeId: "ct-fy3x25", defaultRatingA: 16, defaultCurve: "C", defaultSimultaneity: 0.5, defaultInstallMethodId: "im-b1", note: "Setare initiala editabila (16 A / 3x2,5 mm2); se verifica pe circuit." },
-  { id: "ctp-prize-bucatarie", name: "Prize bucatarie", usage: "prize", defaultCableTypeId: "ct-fy3x25", defaultRatingA: 16, defaultCurve: "C", defaultSimultaneity: 0.6, defaultInstallMethodId: "im-b1", note: "Setare initiala editabila." },
-  { id: "ctp-prize-baie", name: "Prize baie", usage: "prize", defaultCableTypeId: "ct-fy3x25", defaultRatingA: 16, defaultCurve: "C", defaultSimultaneity: 0.5, defaultInstallMethodId: "im-b1", note: "Incapere cu conditii speciale - se verifica cerintele aplicabile." },
-  { id: "ctp-dedicat", name: "Consumator dedicat", usage: "dedicat", defaultCableTypeId: null, defaultRatingA: null, defaultCurve: "C", defaultSimultaneity: 1, defaultInstallMethodId: "im-b1", note: "Sectiunea si protectia se calculeaza din puterea consumatorului si conditiile reale." },
+  { id: "ctp-iluminat", name: "Iluminat", usage: "iluminat", defaultCableTypeId: "ct-nyyj3x15", defaultRatingA: 10, defaultCurve: "C", defaultSimultaneity: 0.8, defaultInstallMethodId: "im-c", note: "Setare initiala editabila (10 A / NYY-J 3x1,5); se verifica pe circuit." },
+  { id: "ctp-prize", name: "Prize generale", usage: "prize", defaultCableTypeId: "ct-nyyj3x25", defaultRatingA: 16, defaultCurve: "C", defaultSimultaneity: 0.5, defaultInstallMethodId: "im-c", note: "Setare initiala editabila (16 A / NYY-J 3x2,5); se verifica pe circuit." },
+  { id: "ctp-prize-bucatarie", name: "Prize bucatarie", usage: "prize", defaultCableTypeId: "ct-nyyj3x25", defaultRatingA: 16, defaultCurve: "C", defaultSimultaneity: 0.6, defaultInstallMethodId: "im-c", note: "Setare initiala editabila." },
+  { id: "ctp-prize-baie", name: "Prize baie", usage: "prize", defaultCableTypeId: "ct-nyyj3x25", defaultRatingA: 16, defaultCurve: "C", defaultSimultaneity: 0.5, defaultInstallMethodId: "im-c", note: "Incapere cu conditii speciale - se verifica cerintele aplicabile." },
+  { id: "ctp-dedicat", name: "Consumator dedicat", usage: "dedicat", defaultCableTypeId: null, defaultRatingA: null, defaultCurve: "C", defaultSimultaneity: 1, defaultInstallMethodId: "im-c", note: "Sectiunea si protectia se calculeaza din puterea consumatorului si conditiile reale." },
   { id: "ctp-curenti-slabi", name: "Curenti slabi", usage: "curenti_slabi", defaultCableTypeId: null, defaultRatingA: null, defaultCurve: null, defaultSimultaneity: 0, defaultInstallMethodId: null, note: "Fara putere 230 V." },
 ];
 
@@ -397,6 +423,7 @@ const operations: Operation[] = [
   O({ id: "op-verificari", code: "OP015", name: "Verificari aferente fazei la rosu", category: "verificari", unit: "circuit", rate: 20, timeMin: 15, driver: "circuits", planStageId: "ps-verificari", dependsOn: ["op-etichetare", "op-conex-dd"], parallelizable: false, subactions: ["Continuitate conductoare si PE", "Rezistenta de izolatie", "Inregistrare rezultate"] }),
   O({ id: "op-demontare-tablou", code: "OP017", name: "Demontare tablou existent", category: "tablou", unit: "tablou", rate: 150, timeMin: 60, driver: "manual", planStageId: "ps-tablouri", parallelizable: false, subactions: ["Scoatere de sub tensiune si verificare lipsa tensiune", "Identificare si marcare circuite existente", "Demontare aparataj si cutie"] }),
   O({ id: "op-reconectare-existent", code: "OP018", name: "Identificare si reconectare circuit existent", category: "tablou", unit: "circuit", rate: 20, timeMin: 15, driver: "existing_circuits", planStageId: "ps-tablouri", dependsOn: ["op-aparat-modular"], parallelizable: false, subactions: ["Identificare circuit", "Verificare stare conductoare", "Conectare in tabloul nou"] }),
+  O({ id: "op-legare-capete", code: "OP019", name: "Pregatire si legare capete cablu in doza / punct", category: "cablare", unit: "buc", rate: 6, timeMin: 5, driver: "end_points", planStageId: "ps-cablare", dependsOn: ["op-cablu"], subactions: ["Dezizolare si fasonare capete", "Legare / izolare provizorie", "Marcare circuit"] }),
   O({ id: "op-deplasare", code: "OP016", name: "Deplasare / organizare santier", category: "diverse", unit: "proiect", rate: 0, timeMin: 0, driver: "manual", planStageId: "ps-pregatire", active: true }),
 ];
 

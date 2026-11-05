@@ -77,14 +77,14 @@ export function SummaryBar({ project, onToggle, open }: { project: Project | nul
       <div className="summary-scroll flex min-w-0 flex-1 items-center overflow-x-auto">
         <Chip label="" value={project.info.code} href="/proiect" tone="volt" title={project.info.name} />
         <Sep />
-        <Chip label="DA" value={String(c.boxesDA)} href="/puncte" title="Doze aparat" />
-        <Chip label="DD" value={String(c.boxesDD)} href="/puncte" title="Doze derivatie" />
-        <Chip label="Prize" value={String(c.sockets)} href="/puncte" />
-        <Chip label="Intr" value={String(c.switches)} href="/puncte" title="Intrerupatoare" />
-        <Chip label="Ilum" value={String(c.lighting)} href="/puncte" title="Puncte de iluminat" />
-        <Chip label="Alte" value={String(c.otherDevices)} href="/puncte" title="Consumatori dedicati, comenzi, alte aparate" />
+        <Chip label="DA" value={String(c.boxesDA)} href="/instalatie" title="Doze aparat" />
+        <Chip label="DD" value={String(c.boxesDD)} href="/instalatie" title="Doze derivatie" />
+        <Chip label="Prize" value={String(c.sockets)} href="/instalatie" />
+        <Chip label="Intr" value={String(c.switches)} href="/instalatie" title="Intrerupatoare" />
+        <Chip label="Ilum" value={String(c.lighting)} href="/instalatie" title="Puncte de iluminat" />
+        <Chip label="Alte" value={String(c.otherDevices)} href="/instalatie" title="Consumatori dedicati, comenzi, alte aparate" />
         <Sep />
-        <Chip label="CI" value={String(c.circuits)} href="/circuite" title="Circuite" />
+        <Chip label="CI" value={String(c.circuits)} href="/instalatie" title="Circuite" />
         <Chip label="TA" value={String(c.panels)} href="/tablouri" title="Tablouri" />
         <Chip label="TR" value={String(c.routes)} href="/trasee" title="Trasee" />
         <Sep />
@@ -104,7 +104,7 @@ export function SummaryBar({ project, onToggle, open }: { project: Project | nul
       </div>
       <div className="flex shrink-0 items-center border-l border-white/10">
         <span className={cx("px-2.5 text-[11px]", unsaved ? "text-amber-300" : "text-emerald-300")} title={unsaved ? "Modificari neexportate in fisier JSON" : "Exportat in fisier"}>
-          {unsaved ? `● Neexportat (${timeAgo(project.lastExportedAt)})` : "● Exportat"}
+          ●<span className="hidden sm:inline">{unsaved ? ` Neexportat (${timeAgo(project.lastExportedAt)})` : " Exportat"}</span>
         </span>
         <button onClick={onToggle} className="h-full px-3 text-[12px] text-white/70 hover:bg-white/10" title="Detalii sumar">
           {open ? "▲" : "▼"}
