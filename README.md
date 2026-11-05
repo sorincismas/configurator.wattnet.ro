@@ -1,4 +1,4 @@
-# WATTNET - Configurator instalatii electrice
+# configurator.wattnet.ro - Configurator instalatii electrice WATTNET
 
 Aplicatie pentru configurarea instalatiilor electrice rezidentiale, calculul manoperei (valoare + timp),
 materiale, tablouri, scheme monofilare, plan de executie si documentatie - conform specificatiei
@@ -54,8 +54,8 @@ Pe Vercel: framework Next.js, comanda `npm run build`, director de iesire `out` 
 | Etapa | Continut | Stare |
 |---|---|---|
 | 1 Fundatie | proiecte, alimentare, cladiri/niveluri/incaperi, identificatori, biblioteca, bara sumar, JSON | **gata** |
-| 2 Model instalatie | doze DA/DD, aparate, consumatori, circuite, trasee, copex, cabluri | urmeaza |
-| 3 Tablouri si calcule | dimensionare asistata I7, tablouri, vedere DIN, schema monofilara | |
+| 2 Model instalatie | doze DA/DD, aparate, consumatori, circuite, trasee, copex, cabluri | **gata** |
+| 3 Tablouri si calcule | dimensionare asistata I7, tablouri, vedere DIN, schema monofilara | urmeaza |
 | 4 Deviz si timp | deviz manopera / + materiale, subtotaluri, tarif orar implicit | motor gata |
 | 5 Documentatie | dosar PDF 14 capitole, versiuni emise | |
 | 6 Plan executie | operatii, dependente, echipa, durata | motor initial |

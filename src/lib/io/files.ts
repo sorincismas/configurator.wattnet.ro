@@ -54,6 +54,7 @@ const libraryFileShape = z.object({ format: z.literal("wattnet-biblioteca"), sch
 export function migrateLibrary(input: Partial<Library>): Library {
   const def = createDefaultLibrary();
   const out = { ...def, ...input } as Library;
+  if (Array.isArray(input.rules)) for (const r of def.rules) if (!out.rules.some((x) => x.id === r.id)) out.rules.push(r);
   out.firm = { ...def.firm, ...(input.firm ?? {}) };
   out.meta = { ...def.meta, ...(input.meta ?? {}) };
   for (const k of Object.keys(def) as (keyof Library)[]) {
@@ -65,6 +66,13 @@ export function migrateLibrary(input: Partial<Library>): Library {
 export function migrateProject(input: Project): Project {
   const p = structuredClone(input);
   p.library = migrateLibrary(p.library);
+  // reguli adaugate ulterior in biblioteca implicita
+  const defRules = createDefaultLibrary().rules;
+  for (const r of defRules) if (!p.library.rules.some((x) => x.id === r.id)) p.library.rules.push(r);
+  for (const d of p.devices ?? []) {
+    d.circuitLocked ??= false;
+    d.junctionBoxId ??= null;
+  }
   p.issued ??= [];
   p.history ??= [];
   p.measurements ??= [];

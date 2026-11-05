@@ -10,6 +10,7 @@ import { del, get, set } from "idb-keyval";
 import { createDefaultLibrary } from "../library/default-library";
 import { applyTemplate, createEmptyProject, nowISO } from "../model/factory";
 import { migrateLibrary, migrateProject, projectAsTemplate } from "../io/files";
+import { syncCables } from "../engine/cables";
 import type { Library, Project } from "../model/types";
 
 const hasIDB = () => typeof indexedDB !== "undefined";
@@ -114,6 +115,8 @@ export const useApp = create<AppState>()(
         if (!cur) return;
         const next = structuredClone(cur);
         recipe(next);
+        // cablurile (CB) se tin sincronizate cu traseele si circuitele
+        syncCables(next);
         next.updatedAt = nowISO();
         if (historyAction) {
           next.history.push({ at: next.updatedAt, action: "modificare", detail: historyAction });

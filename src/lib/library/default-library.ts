@@ -393,6 +393,8 @@ const rules: TechnicalRule[] = [
   R({ id: "r-coord-prot", code: "R005", title: "Coordonare protectie - conductor: Ib <= In <= I'z", classification: "standard_tehnic", reference: "SR HD 60364-4-43 / I7-2011 cap. 5", conditions: "Pentru protectia la suprasarcina." }),
   R({ id: "r-rcd-prize", code: "R006", title: "Protectie diferentiala 30 mA pentru circuitele de prize", classification: "cerinta_normativa", reference: "de completat (I7-2011 cap. 4)", notes: "Referinta exacta se completeaza la validare." }),
   R({ id: "r-echilibrare", code: "R007", title: "Echilibrarea sarcinilor pe faze (abatere maxima recomandata)", classification: "conventie_wattnet", reference: "conventie interna", source: "WATTNET", version: "1", params: { maxImbalancePct: 20 } }),
+  R({ id: "r-incarcare-grupare", code: "R011", title: "Incarcare maxima la gruparea automata a punctelor pe circuit", classification: "conventie_wattnet", reference: "conventie interna", source: "WATTNET", version: "1", params: { maxLoadPct: 80 }, notes: "Puterea aplicata a circuitului (P instalata x ks) nu depaseste acest procent din In x U x cos φ. Nu inlocuieste verificarea circuitului." }),
+  R({ id: "r-rezerva-cablu", code: "R012", title: "Rezerva de cablu la capete (doze, tablou)", classification: "conventie_wattnet", reference: "conventie interna", source: "WATTNET", version: "1", params: { reserveM: 1 } }),
   R({ id: "r-rezerva-tablou", code: "R008", title: "Rezerva de module in tablou", classification: "conventie_wattnet", reference: "conventie interna", source: "WATTNET", version: "1", params: { minReservePct: 20 } }),
 ];
 
