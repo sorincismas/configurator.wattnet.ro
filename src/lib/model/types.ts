@@ -693,6 +693,8 @@ export interface DeviceType {
   needsBox: boolean;
   brand: string;
   materialId: ID | null;
+  /** tipul preselectat la adaugarea aparatelor */
+  isDefault?: boolean;
 }
 
 export interface BoxType {
@@ -705,6 +707,8 @@ export interface BoxType {
   materialId: ID | null;
   /** operatia de manopera pentru montaj */
   operationId: ID | null;
+  /** tipul preselectat la adaugarea dozelor (unul pentru DA, unul pentru DD) */
+  isDefault?: boolean;
 }
 
 export interface CableType {

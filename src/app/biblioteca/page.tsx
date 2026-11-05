@@ -240,8 +240,18 @@ export default function LibraryPage() {
               { key: "modules", label: "Module", type: "number", width: "75px" },
               { key: "brand", label: "Producator", type: "text", width: "110px" },
               { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "220px" },
+              {
+                key: "isDefault",
+                label: "Implicit",
+                type: "custom",
+                width: "70px",
+                render: (r) => (
+                  <input type="radio" className="accent-ink" name={`default-box-${r.kind}`} checked={!!r.isDefault} title="tipul preselectat la adaugarea dozelor" onChange={() => updateLib((l) => l.boxTypes.forEach((b) => { if (b.kind === r.kind) b.isDefault = b.id === r.id; }))} />
+                ),
+              },
             ]}
           />
+          <p className="mt-2 text-xs text-ink-3">„Implicit” = tipul preselectat in Doze si aparate (unul pentru doze aparat, unul pentru doze derivatie).</p>
         </Card>
       )}
 
@@ -294,8 +304,16 @@ export default function LibraryPage() {
               { key: "suggestedPowerW", label: "Putere sugerata", type: "number", suffix: "W", width: "120px", nullable: true },
               { key: "threePhase", label: "Trifazat", type: "checkbox", width: "65px" },
               { key: "brand", label: "Producator", type: "text", width: "110px" },
+              {
+                key: "isDefault",
+                label: "Implicit",
+                type: "custom",
+                width: "70px",
+                render: (r) => <input type="radio" className="accent-ink" name="default-device" checked={!!r.isDefault} title="aparatul preselectat la adaugare" onChange={() => updateLib((l) => l.deviceTypes.forEach((d) => (d.isDefault = d.id === r.id)))} />,
+              },
             ]}
           />
+          <p className="mt-2 text-xs text-ink-3">„Implicit” = aparatul preselectat in Doze si aparate.</p>
         </Card>
       )}
 
