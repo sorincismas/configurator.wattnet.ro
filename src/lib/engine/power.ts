@@ -63,11 +63,30 @@ export function installedPowerOf(devices: Device[]): PowerSum {
   return { value: known > 0 ? round(total, 0) : relevant.length === 0 ? 0 : null, unknownCount: unknown, knownCount: known };
 }
 
+/** circuit fara aparate modelate, cu putere declarata direct */
+export const usesDeclaredPower = (p: Project, c: Circuit) => !p.devices.some((d) => d.circuitId === c.id) && !!c.declaredPowerW;
+
 export function installedPower(p: Project): PowerSum {
-  return installedPowerOf(p.devices);
+  const base = installedPowerOf(p.devices);
+  let total = base.value ?? 0;
+  let known = base.knownCount;
+  let unknown = base.unknownCount;
+  for (const c of p.circuits) {
+    if (!usesDeclaredPower(p, c)) continue;
+    if (c.declaredPowerW!.value === null) unknown++;
+    else {
+      total += c.declaredPowerW!.value;
+      known++;
+    }
+  }
+  return { value: known > 0 ? round(total, 0) : known + unknown === 0 ? 0 : null, unknownCount: unknown, knownCount: known };
 }
 
 export function circuitInstalledPower(p: Project, c: Circuit): PowerSum {
+  if (usesDeclaredPower(p, c)) {
+    const v = c.declaredPowerW!.value;
+    return { value: v, unknownCount: v === null ? 1 : 0, knownCount: v === null ? 0 : 1 };
+  }
   return installedPowerOf(p.devices.filter((d) => d.circuitId === c.id));
 }
 

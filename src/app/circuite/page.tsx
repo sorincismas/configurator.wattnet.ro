@@ -2,7 +2,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { RequireProject } from "@/components/shell/AppShell";
 import { CATEGORY_LABEL, circuitOptions, roomLabel } from "@/components/install/common";
-import { Badge, Button, Card, Code, ConfirmButton, Empty, NumberInput, PageHeader, Select, Table, TextInput, TrackedNumber, cx } from "@/components/ui";
+import { Badge, Button, Card, Checkbox, Code, ConfirmButton, Empty, NumberInput, PageHeader, Select, Table, TextInput, TrackedNumber, cx } from "@/components/ui";
 import { allCircuitLoads, generateCircuits, moveDevice, type CircuitLoad, type GenerationReport } from "@/lib/engine/circuits";
 import { isPowerDevice } from "@/lib/engine/power";
 import { fmtNum, NA } from "@/lib/format";
@@ -201,9 +201,14 @@ function CircuitRow({ p, l, up, first, last, open, toggle }: { p: Project; l: Ci
       </td>
       <td className="num whitespace-nowrap text-xs">{pts || "—"}</td>
       <td className="num whitespace-nowrap">
-        <span className={cx(l.installed.unknownCount > 0 && "v-estimated")} title={l.installed.unknownCount ? `${l.installed.unknownCount} consumatori fara putere` : undefined}>
-          {l.installed.value === null ? NA : fmtNum(l.installed.value, 0) + " W"}
-        </span>
+        {l.devices.length === 0 ? (
+          <TrackedNumber className="w-32" value={c.declaredPowerW ?? { value: null, provenance: "beneficiar" }} suffix="W" allowedProvenance={["beneficiar", "estimat", "proiectant", "masurat"]} onChange={(v) => set((x) => void (x.declaredPowerW = v))} />
+        ) : (
+          <span className={cx(l.installed.unknownCount > 0 && "v-estimated")} title={l.installed.unknownCount ? `${l.installed.unknownCount} consumatori fara putere` : undefined}>
+            {l.installed.value === null ? NA : fmtNum(l.installed.value, 0) + " W"}
+          </span>
+        )}
+        {c.existing && <div className="text-[10px] text-ink-3">existent</div>}
       </td>
       <td className="w-20"><NumberInput value={c.simultaneity.value} onChange={(v) => set((x) => void (x.simultaneity = { value: v === null ? null : Math.min(1, Math.max(0, v)), provenance: "estimat", status: "estimat" }))} /></td>
       <td className="num whitespace-nowrap font-semibold">{l.appliedW === null ? <span className="v-unknown">{NA}</span> : fmtNum(l.appliedW, 0) + " W"}</td>
@@ -296,7 +301,13 @@ function CircuitDetails({ p, l, up }: { p: Project; l: CircuitLoad; up: Up }) {
             <span className="mb-1 block font-semibold uppercase tracking-wide text-ink-2">Circuite grupate (K2)</span>
             <NumberInput value={c.groupedCircuits} onChange={(v) => set((x) => void (x.groupedCircuits = Math.max(1, v ?? 1)))} />
           </label>
-          <label className="text-xs md:col-span-2">
+          <div className="flex flex-col justify-end gap-1 text-xs">
+            <Checkbox checked={!!c.existing} onChange={(v) => set((x) => void (x.existing = v))} label="Circuit existent (doar reconectare in tablou)" />
+            {l.devices.length === 0 && (
+              <span className="flex items-center gap-1">Puncte declarate: <NumberInput className="w-16" value={c.declaredPoints ?? null} onChange={(v) => set((x) => void (x.declaredPoints = v))} /></span>
+            )}
+          </div>
+          <label className="text-xs">
             <span className="mb-1 block font-semibold uppercase tracking-wide text-ink-2">Observatii</span>
             <TextInput value={c.notes} onChange={(v) => set((x) => void (x.notes = v))} />
           </label>
