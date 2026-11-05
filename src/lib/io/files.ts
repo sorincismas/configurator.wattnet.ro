@@ -58,12 +58,13 @@ export function migrateLibrary(input: Partial<Library>): Library {
   // (daca utilizatorul sterge ulterior un element, acesta nu mai revine)
   const rev = input.meta?.defaultsRev ?? 1;
   if (rev < DEFAULTS_REV) {
-    const keys = ["rules", "protectionDevices", "materials", "cableTypes", "conduitTypes", "boxTypes", "deviceTypes", "circuitTypes", "enclosureTypes", "difficultyFactors"] as const;
+    const keys = ["rules", "operations", "protectionDevices", "materials", "cableTypes", "conduitTypes", "boxTypes", "deviceTypes", "circuitTypes", "enclosureTypes", "difficultyFactors"] as const;
     for (const k of keys) {
       const cur = (Array.isArray(out[k]) ? out[k] : []) as { id: string }[];
       for (const item of def[k] as { id: string }[]) if (!cur.some((x) => x.id === item.id)) cur.push(structuredClone(item));
       (out as unknown as Record<string, unknown>)[k] = cur;
     }
+    if (rev < 4) for (const o of out.operations) if (o.id === "op-conectare-circuit" && o.driver === "circuits") o.driver = "new_circuits";
     // regulile existente cu referinte provizorii primesc textul nou
     for (const r of out.rules) {
       const d = def.rules.find((x) => x.id === r.id);

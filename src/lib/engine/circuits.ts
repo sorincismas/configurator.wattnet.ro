@@ -62,10 +62,10 @@ export function circuitLoad(p: Project, c: Circuit): CircuitLoad {
   return {
     circuit: c,
     devices,
-    sockets: devices.filter((d) => d.category === "priza").length,
-    lights: devices.filter((d) => d.category === "iluminat").length,
+    sockets: devices.length === 0 && c.declaredPoints != null && c.usage === "prize" ? c.declaredPoints : devices.filter((d) => d.category === "priza").length,
+    lights: devices.length === 0 && c.declaredPoints != null && c.usage === "iluminat" ? c.declaredPoints : devices.filter((d) => d.category === "iluminat").length,
     switches: devices.filter((d) => d.category === "intrerupator").length,
-    others: devices.filter((d) => !["priza", "iluminat", "intrerupator"].includes(d.category)).length,
+    others: devices.length === 0 && c.declaredPoints != null && !["prize", "iluminat"].includes(c.usage) ? c.declaredPoints : devices.filter((d) => !["priza", "iluminat", "intrerupator"].includes(d.category)).length,
     installed,
     appliedW,
     designCurrentA: appliedW !== null && appliedW > 0 ? designCurrent(appliedW, sys, cos, U) : appliedW === 0 ? 0 : null,

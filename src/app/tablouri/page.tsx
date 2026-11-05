@@ -3,11 +3,14 @@ import { useMemo, useRef, useState } from "react";
 import { RequireProject } from "@/components/shell/AppShell";
 import { roomLabel } from "@/components/install/common";
 import { DinView } from "@/components/panel/DinView";
+import { QuickCircuits } from "@/components/panel/QuickCircuits";
 import { SingleLine } from "@/components/panel/SingleLine";
 import { Badge, Button, Card, Checkbox, Code, ConfirmButton, Empty, Field, NumberInput, PageHeader, Select, Table, TextInput, TrackedNumber, cx } from "@/components/ui";
 import { circuitLoad } from "@/lib/engine/circuits";
 import { balancePhases, DEFAULT_PANEL_OPTIONS, deviceOf, generatePanelEquipment, layoutPanel, moveItem, newPanel, phaseLoads, removePanel, type PanelGenReport } from "@/lib/engine/panels";
 import { applySizing, panelLoad, proposeSizing, type SizingProposal } from "@/lib/engine/sizing";
+import { usesDeclaredPower } from "@/lib/engine/power";
+import { removeCircuit } from "@/lib/model/factory";
 import { downloadSVG, printElement } from "@/lib/io/svg";
 import { safeFileName } from "@/lib/io/files";
 import { fmtNum, NA } from "@/lib/format";
@@ -343,11 +346,12 @@ function CircuitSizingCard({ p, panel, up }: { p: Project; panel: Panel; up: Up 
         </>
       }
     >
+      <div className="mb-3"><QuickCircuits p={p} panel={panel} up={up} /></div>
       {circuits.length === 0 ? (
         <p className="text-sm text-ink-3">Niciun circuit in acest tablou.</p>
       ) : (
         <Table>
-          <thead><tr><th>Circuit</th><th className="num">P apl.</th><th className="num">Ic</th><th>Cablu actual</th><th>Protectie actuala</th><th>Pozare</th><th>Propunere</th><th>Tablou</th></tr></thead>
+          <thead><tr><th>Circuit</th><th>Putere / puncte declarate</th><th>Existent</th><th className="num">P apl.</th><th className="num">Ic</th><th>Cablu actual</th><th>Protectie actuala</th><th>Pozare</th><th>Propunere</th><th>Tablou</th></tr></thead>
           <tbody>
             {circuits.map((c) => {
               const l = circuitLoad(p, c);
@@ -357,7 +361,21 @@ function CircuitSizingCard({ p, panel, up }: { p: Project; panel: Panel; up: Up 
               const same = pr?.ok && pr.cableTypeId === c.cableTypeId && pr.protectionDeviceId === c.protection.protectionDeviceId;
               return (
                 <tr key={c.id}>
-                  <td><Code>{c.code}</Code> {c.name}</td>
+                  <td className="min-w-52">
+                    <div className="flex items-center gap-1"><Code>{c.code}</Code><TextInput value={c.name} onChange={(v) => up((x) => void (x.circuits.find((z) => z.id === c.id)!.name = v))} /></div>
+                  </td>
+                  <td className="min-w-52">
+                    {l.devices.length > 0 ? (
+                      <span className="text-xs text-ink-3">din {l.devices.length} puncte modelate</span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <TrackedNumber className="w-32" value={c.declaredPowerW ?? { value: null, provenance: "beneficiar" }} suffix="W" allowedProvenance={["beneficiar", "estimat", "proiectant", "masurat"]} onChange={(v) => up((x) => void (x.circuits.find((z) => z.id === c.id)!.declaredPowerW = v))} />
+                        <NumberInput className="w-16" value={c.declaredPoints ?? null} placeholder="puncte" onChange={(v) => up((x) => void (x.circuits.find((z) => z.id === c.id)!.declaredPoints = v))} />
+                      </div>
+                    )}
+                    {!usesDeclaredPower(p, c) && l.devices.length === 0 && <span className="text-[10px] text-warn">putere necunoscuta</span>}
+                  </td>
+                  <td className="text-center"><Checkbox checked={!!c.existing} onChange={(v) => up((x) => void (x.circuits.find((z) => z.id === c.id)!.existing = v), `${c.code} ${v ? "existent" : "nou"}`)} /></td>
                   <td className="num whitespace-nowrap">{l.appliedW === null ? NA : fmtNum(l.appliedW, 0) + " W"}</td>
                   <td className="num whitespace-nowrap">{l.designCurrentA === null ? NA : fmtNum(l.designCurrentA, 1) + " A"}</td>
                   <td>{cable?.name ?? <Badge tone="warn">de stabilit</Badge>}</td>
@@ -382,8 +400,11 @@ function CircuitSizingCard({ p, panel, up }: { p: Project; panel: Panel; up: Up 
                       </span>
                     )}
                   </td>
-                  <td className="w-32">
-                    <Select value={c.panelId} onChange={(v) => up((x) => void (x.circuits.find((z) => z.id === c.id)!.panelId = v), `${c.code} mutat in alt tablou`)} options={p.panels.map((t) => ({ value: t.id, label: t.code }))} />
+                  <td className="w-40">
+                    <div className="flex items-center gap-1">
+                      <Select value={c.panelId} onChange={(v) => up((x) => void (x.circuits.find((z) => z.id === c.id)!.panelId = v), `${c.code} mutat in alt tablou`)} options={p.panels.map((t) => ({ value: t.id, label: t.code }))} />
+                      {l.devices.length === 0 && <ConfirmButton onConfirm={() => up((x) => removeCircuit(x, c.id), `Circuit sters ${c.code}`)}>✕</ConfirmButton>}
+                    </div>
                   </td>
                 </tr>
               );

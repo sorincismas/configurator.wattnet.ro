@@ -14,6 +14,10 @@ import type { Circuit, Panel, PanelItem, Project } from "@/lib/model/types";
 
 const LEFT = 200;
 const COL = 100;
+/** coloana rezervata alimentarii si aparatului general, inaintea circuitelor */
+const FEED_W = 120;
+/** numar minim de coloane pentru latimea desenului (format A3 constant) */
+const MIN_COLS = 8;
 const F = "Arial";
 
 type Col = { kind: "circuit"; item: PanelItem; circuit: Circuit | undefined } | { kind: "feeder"; item: PanelItem; child: Panel | undefined } | { kind: "spare"; item: PanelItem };
@@ -65,8 +69,8 @@ export const SingleLine = forwardRef<SVGSVGElement, { p: Project; panel: Panel }
   for (const c of p.circuits.filter((x) => x.panelId === panel.id && x.usage !== "curenti_slabi").sort((a, b) => a.order - b.order))
     if (!items.some((i) => i.circuitIds.includes(c.id))) cols.push({ kind: "circuit", item: { id: "v-" + c.id, code: "", protectionDeviceId: c.protection.protectionDeviceId, label: c.name, circuitIds: [c.id], downstreamItemIds: [], row: null, position: null, isSpare: false, role: "circuit" }, circuit: c });
 
-  const n = Math.max(cols.length, 1);
-  const W = LEFT + n * COL + COL + 20; // + coloana total
+  const n = cols.length;
+  const W = LEFT + FEED_W + Math.max(n, MIN_COLS) * COL + COL + 20; // + coloana total
   const Y = { title: 34, feed: 70, gen: 150, bus: 250, rcd: 268, sub: 340, mcb: 356, cab: 420, arrow: 580, table: 600 };
   const ROWS = ["Nr.", "Putere instalata [W]", "ks / Putere aplicata [W]", "Curent de calcul Ic [A]", "Lungime [m]", "ΔU total [%]", "Faza", "Nr. prize / puncte", "Circuit", "Descriere"];
   const RH = 26;
@@ -74,7 +78,12 @@ export const SingleLine = forwardRef<SVGSVGElement, { p: Project; panel: Panel }
   const tableH = (ROWS.length - 1) * RH + descH;
   const cartH = 120;
   const H = Y.table + tableH + cartH + 30;
-  const colX = (i: number) => LEFT + i * COL + COL / 2;
+  const colX = (i: number) => LEFT + FEED_W + i * COL + COL / 2;
+  const cellX = (i: number) => LEFT - 10 + FEED_W + i * COL;
+  const busEnd = n > 0 ? colX(n - 1) + 20 : LEFT + FEED_W + COL;
+  const xL = LEFT + 95; // conductor de faza si aparatul general
+  const xPE = LEFT + 20;
+  const xN = LEFT + 55;
 
   const load = panelLoad(p, panel.id);
   const parent = p.panels.find((t) => t.id === panel.parentPanelId);
@@ -118,9 +127,9 @@ export const SingleLine = forwardRef<SVGSVGElement, { p: Project; panel: Panel }
       l.length.value === null ? "—" : fmtNum(l.length.value, 1) + (l.length.certainty === "masurat" ? "" : " e"),
       a.duTotalPct === null ? "—" : fmtNum(a.duTotalPct, 2),
       p.supply.system === "mono" ? "L1" : circ.phase === "L123" ? "L123" : (circ.phase ?? "—"),
-      l.sockets ? String(l.sockets) : String(l.devices.filter((d) => d.category !== "intrerupator").length),
+      l.devices.length === 0 ? (circ.declaredPoints != null ? String(circ.declaredPoints) : "—") : l.sockets ? String(l.sockets) : String(l.devices.filter((d) => d.category !== "intrerupator").length),
       circ.code,
-      `${circ.name}${rooms && !circ.name.includes(rooms) ? " - " + rooms : ""}`,
+      `${circ.name}${rooms && !circ.name.includes(rooms) ? " - " + rooms : ""}${circ.existing ? " (existent)" : ""}`,
     ];
   };
   const cells = cols.map(cellsFor);
@@ -169,44 +178,44 @@ export const SingleLine = forwardRef<SVGSVGElement, { p: Project; panel: Panel }
         </g>
       ))}
 
-      {/* alimentare */}
-      {(() => {
-        const x0 = LEFT + 60;
-        return (
+      {/* alimentare: PE si N la stanga, faza L cu aparatul general */}
+      <g>
+        <text x={xPE} y={Y.feed + 6} fontSize={12}>{feedText}</text>
+        <line x1={xPE} y1={Y.feed + 20} x2={xPE} y2={Y.bus - 10} stroke="#14181f" strokeDasharray="6 3" />
+        <text x={xPE + 5} y={Y.feed + 40} fontSize={11}>PE</text>
+        <line x1={xN} y1={Y.feed + 20} x2={xN} y2={Y.bus - 18} stroke="#14181f" />
+        <text x={xN + 5} y={Y.feed + 40} fontSize={11}>N</text>
+        <line x1={xL} y1={Y.feed + 20} x2={xL} y2={Y.gen} stroke="#14181f" strokeWidth={1.6} />
+        <text x={xL + 5} y={Y.feed + 40} fontSize={11}>L{p.supply.system === "tri" ? "1-L3" : ""}</text>
+        {spd && (
           <g>
-            <text x={x0 + 30} y={Y.feed + 6} fontSize={12}>{feedText}</text>
-            <line x1={x0} y1={Y.feed + 20} x2={x0} y2={Y.gen} stroke="#14181f" strokeWidth={1.6} />
-            <text x={x0 - 8} y={Y.feed + 40} fontSize={11} textAnchor="end">L{p.supply.system === "tri" ? "1-3" : ""}</text>
-            <line x1={x0 + 40} y1={Y.feed + 20} x2={x0 + 40} y2={Y.bus - 10} stroke="#14181f" strokeDasharray="6 3" />
-            <text x={x0 + 46} y={Y.feed + 40} fontSize={11}>PE</text>
-            <line x1={x0 + 80} y1={Y.feed + 20} x2={x0 + 80} y2={Y.bus - 18} stroke="#14181f" />
-            <text x={x0 + 86} y={Y.feed + 40} fontSize={11}>N</text>
-            {spd && (
-              <g>
-                <line x1={x0} y1={Y.feed + 52} x2={x0 - 40} y2={Y.feed + 52} stroke="#14181f" />
-                <rect x={x0 - 58} y={Y.feed + 44} width={18} height={30} fill="none" stroke="#14181f" />
-                <text x={x0 - 49} y={Y.feed + 88} fontSize={10} textAnchor="middle">SPD</text>
-              </g>
-            )}
-            {general ? <Breaker x={x0} y={Y.gen} h={70} rcd={!!generalIsRcd} /> : <line x1={x0} y1={Y.gen} x2={x0} y2={Y.gen + 70} stroke="#14181f" strokeWidth={1.6} />}
-            {general && (
-              <g>
-                <text x={x0 + 18} y={Y.gen + 22} fontSize={12}>Q1</text>
-                <text x={x0 + 18} y={Y.gen + 38} fontSize={11} fontWeight={700}>{devText(p, general)}</text>
-              </g>
-            )}
-            <line x1={x0} y1={Y.gen + 70} x2={x0} y2={Y.bus} stroke="#14181f" strokeWidth={1.6} />
-            <text x={x0 + 18} y={Y.gen + 58} fontSize={10} fill="#4a5260">
-              P aplicata tablou: {fmtNum(load.appliedW, 0)} W · Ic: {load.currentA === null ? "—" : fmtNum(load.currentA, 1)} A
-            </text>
+            <line x1={xL} y1={Y.feed + 56} x2={xL + 40} y2={Y.feed + 56} stroke="#14181f" />
+            <rect x={xL + 40} y={Y.feed + 46} width={18} height={30} fill="none" stroke="#14181f" />
+            <text x={xL + 64} y={Y.feed + 66} fontSize={10}>SPD {devText(p, spd)}</text>
           </g>
-        );
-      })()}
+        )}
+        {general ? <Breaker x={xL} y={Y.gen} h={70} rcd={!!generalIsRcd} /> : <line x1={xL} y1={Y.gen} x2={xL} y2={Y.gen + 70} stroke="#14181f" strokeWidth={1.6} />}
+        {general && (
+          <g>
+            <text x={xL + 18} y={Y.gen + 22} fontSize={12}>Q1</text>
+            <text x={xL + 18} y={Y.gen + 38} fontSize={11} fontWeight={700}>{devText(p, general)}</text>
+          </g>
+        )}
+        <line x1={xL} y1={Y.gen + 70} x2={xL} y2={Y.bus} stroke="#14181f" strokeWidth={1.6} />
+        <text x={xL + 18} y={Y.gen + 58} fontSize={10} fill="#4a5260">
+          P aplicata tablou: {fmtNum(load.appliedW, 0)} W · Ic: {load.currentA === null ? "—" : fmtNum(load.currentA, 1)} A
+        </text>
+      </g>
 
       {/* bara principala, PE si N */}
-      <line x1={LEFT} y1={Y.bus} x2={LEFT + n * COL - 10} y2={Y.bus} stroke="#14181f" strokeWidth={2.2} />
-      <line x1={LEFT} y1={Y.bus - 10} x2={LEFT + n * COL - 10} y2={Y.bus - 10} stroke="#14181f" strokeDasharray="6 3" />
-      <line x1={LEFT} y1={Y.bus - 18} x2={LEFT + n * COL - 10} y2={Y.bus - 18} stroke="#14181f" />
+      <line x1={xL} y1={Y.bus} x2={busEnd} y2={Y.bus} stroke="#14181f" strokeWidth={2.2} />
+      <line x1={xPE} y1={Y.bus - 10} x2={busEnd} y2={Y.bus - 10} stroke="#14181f" strokeDasharray="6 3" />
+      <line x1={xN} y1={Y.bus - 18} x2={busEnd} y2={Y.bus - 18} stroke="#14181f" />
+      {n === 0 && (
+        <text x={LEFT + FEED_W + 20} y={Y.cab} fontSize={13} fill="#8a919c">
+          Tabloul nu are inca circuite. Adauga circuite (inclusiv circuite declarate rapid, fara puncte) din „Circuite in tablou”.
+        </text>
+      )}
 
       {/* grupuri RCD */}
       {groups.map((g, k) => {
@@ -273,8 +282,9 @@ export const SingleLine = forwardRef<SVGSVGElement, { p: Project; panel: Panel }
               <g key={label}>
                 <rect x={1} y={rowsY[k].y} width={LEFT - 11} height={rowsY[k].h} fill="none" stroke="#14181f" />
                 <text x={(LEFT - 10) / 2} y={rowsY[k].y + rowsY[k].h / 2 + 4} textAnchor="middle" fontWeight={700}>{label}</text>
+                <rect x={LEFT - 10} y={rowsY[k].y} width={FEED_W} height={rowsY[k].h} fill="#fbfaf7" stroke="#14181f" strokeWidth={0.8} />
                 {cells.map((cl, i) => {
-                  const x = LEFT - 10 + i * COL;
+                  const x = cellX(i);
                   const lines = k === ROWS.length - 1 ? wrap(cl[k]) : [cl[k]];
                   return (
                     <g key={i}>
@@ -288,8 +298,8 @@ export const SingleLine = forwardRef<SVGSVGElement, { p: Project; panel: Panel }
                   );
                 })}
                 {/* total */}
-                <rect x={LEFT - 10 + n * COL} y={rowsY[k].y} width={COL + 10} height={rowsY[k].h} fill="#f6f5f1" stroke="#14181f" strokeWidth={0.8} />
-                <text x={LEFT - 10 + n * COL + (COL + 10) / 2} y={rowsY[k].y + rowsY[k].h / 2 + 4} textAnchor="middle" fontWeight={700}>
+                <rect x={cellX(n)} y={rowsY[k].y} width={COL + 10} height={rowsY[k].h} fill="#f6f5f1" stroke="#14181f" strokeWidth={0.8} />
+                <text x={cellX(n) + (COL + 10) / 2} y={rowsY[k].y + rowsY[k].h / 2 + 4} textAnchor="middle" fontWeight={700}>
                   {k === 0 ? "Total" : k === 1 ? fmtNum(totalPi, 0) : k === 2 ? fmtNum(totalPa, 0) : k === 3 ? (load.currentA === null ? "—" : fmtNum(load.currentA, 1)) : k === 8 ? panel.code : ""}
                 </text>
               </g>

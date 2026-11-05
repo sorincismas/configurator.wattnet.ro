@@ -30,13 +30,97 @@ function boxShape(p: Project, boxTypeId: string | null) {
   return p.library.boxTypes.find((b) => b.id === boxTypeId)?.shape ?? "rotunda";
 }
 
+/* --------------------- domeniul devizului (lucrari partiale) -------- */
+
+export const SCOPE_PRESET_CATEGORIES: Record<string, string[]> = {
+  tot: [],
+  tablou: ["tablou", "verificari", "diverse"],
+};
+
+export interface ResolvedScope {
+  categories: Set<string> | null;
+  panels: Set<string> | null;
+  levels: Set<string> | null;
+  label: string;
+}
+
+export function resolveScope(p: Project): ResolvedScope {
+  const sc = p.quote.scope;
+  if (!sc || sc.preset === "tot") return { categories: null, panels: sc?.panelIds.length ? new Set(sc.panelIds) : null, levels: sc?.levelIds.length ? new Set(sc.levelIds) : null, label: "Toata lucrarea" };
+  const cats = sc.preset === "tablou" ? SCOPE_PRESET_CATEGORIES.tablou : sc.categories;
+  return {
+    categories: cats.length ? new Set(cats) : null,
+    panels: sc.panelIds.length ? new Set(sc.panelIds) : null,
+    levels: sc.levelIds.length ? new Set(sc.levelIds) : null,
+    label: sc.preset === "tablou" ? "Doar tablou electric" : "Lucrare partiala",
+  };
+}
+
+/** tablourile de care tine un element (circuit, doza, aparat, traseu, tub, tablou, element de tablou) */
+export function sourcePanels(p: Project, id: string): Set<string> {
+  const out = new Set<string>();
+  const addCircuit = (cid: string | null | undefined) => {
+    const c = p.circuits.find((x) => x.id === cid);
+    if (c?.panelId) out.add(c.panelId);
+  };
+  const c = p.circuits.find((x) => x.id === id);
+  if (c) {
+    if (c.panelId) out.add(c.panelId);
+    return out;
+  }
+  if (p.panels.some((t) => t.id === id)) return out.add(id);
+  const owner = p.panels.find((t) => t.items.some((i) => i.id === id));
+  if (owner) return out.add(owner.id);
+  if (p.boxes.some((b) => b.id === id)) {
+    for (const d of p.devices) if (d.boxId === id) addCircuit(d.circuitId);
+    // doza de derivatie: tablourile circuitelor traseelor pe care se afla
+    for (const r of p.routes)
+      if (r.segments.some((sg) => sg.to.refId === id || sg.from.refId === id)) for (const cd of r.conduits) cd.circuitIds.forEach(addCircuit);
+    return out;
+  }
+  const d = p.devices.find((x) => x.id === id);
+  if (d) {
+    addCircuit(d.circuitId);
+    return out;
+  }
+  const r = p.routes.find((x) => x.id === id);
+  if (r) {
+    for (const cd of r.conduits) cd.circuitIds.forEach(addCircuit);
+    for (const sg of r.segments) for (const n of [sg.from, sg.to]) if (n.kind === "panel" && n.refId) out.add(n.refId);
+    return out;
+  }
+  for (const rr of p.routes) {
+    const cd = rr.conduits.find((x) => x.id === id);
+    if (cd) {
+      cd.circuitIds.forEach(addCircuit);
+      return out;
+    }
+  }
+  return out;
+}
+
+/** elementul intra in domeniul devizului? */
+export function inScope(p: Project, scope: ResolvedScope, id: string, roomId: string | null): boolean {
+  if (scope.levels && roomId) {
+    const lv = p.rooms.find((r) => r.id === roomId)?.levelId;
+    if (lv && !scope.levels.has(lv)) return false;
+  }
+  if (scope.panels) {
+    const ps = sourcePanels(p, id);
+    if (ps.size === 0) return false;
+    if (![...ps].some((x) => scope.panels!.has(x))) return false;
+  }
+  return true;
+}
+
 /** cantitatile brute pe incaperi, pentru un driver */
-export function allocationsFor(p: Project, driver: QuantityDriver): Allocation[] {
+export function allocationsFor(p: Project, driver: QuantityDriver, scope: ResolvedScope | null = null): Allocation[] {
   const rooms = roomById(p);
   const wallOf = (roomId: string | null) => (roomId ? rooms.get(roomId)?.wallTypeId ?? null : null);
   const groupByRoom = (items: { roomId: string | null; id: string; qty?: number; wallTypeId?: string | null }[]): Allocation[] => {
     const m = new Map<string, Allocation>();
     for (const it of items) {
+      if (scope && !inScope(p, scope, it.id, it.roomId)) continue;
       const wall = it.wallTypeId !== undefined ? it.wallTypeId : wallOf(it.roomId);
       const key = `${it.roomId ?? "-"}|${wall ?? "-"}`;
       const a = m.get(key) ?? { roomId: it.roomId, quantity: 0, wallTypeId: wall, sourceIds: [] };
@@ -84,9 +168,15 @@ export function allocationsFor(p: Project, driver: QuantityDriver): Allocation[]
       );
     case "conduit_m":
       return groupByRoom(p.routes.flatMap((r) => r.conduits.map((c) => ({ roomId: r.roomIds[0] ?? null, id: c.id, qty: conduitLength(r, c).value ?? 0 }))));
+    case "new_circuits":
+      return groupByRoom(
+        p.circuits.filter((c) => c.usage !== "curenti_slabi" && !c.existing).map((c) => ({ roomId: p.panels.find((t) => t.id === c.panelId)?.roomId ?? null, id: c.id })),
+      );
+    case "existing_circuits":
+      return groupByRoom(p.circuits.filter((c) => c.existing).map((c) => ({ roomId: p.panels.find((t) => t.id === c.panelId)?.roomId ?? null, id: c.id })));
     case "cable_m":
       return groupByRoom(
-        p.circuits.map((c) => {
+        p.circuits.filter((c) => !c.existing).map((c) => {
           const firstDevice = p.devices.find((d) => d.circuitId === c.id);
           return { roomId: firstDevice?.roomId ?? null, id: c.id, qty: circuitCableLength(p, c).value ?? 0 };
         }),
@@ -180,14 +270,16 @@ export function computeLabor(p: Project): LaborResult {
   const overrides = new Map(p.operationOverrides.map((o) => [o.operationId, o] as const));
   const lines: LaborLine[] = [];
 
+  const scope = resolveScope(p);
   for (const op of lib.operations) {
     if (!op.active) continue;
     if (!p.info.phases.includes(op.phase)) continue;
+    if (scope.categories && !scope.categories.has(op.category)) continue;
     const ov = overrides.get(op.id);
     const rate = ov?.rateOverride ?? op.rate;
     const tUnit = ov?.timeOverrideMin ?? op.timeMin;
 
-    const raw = allocationsFor(p, op.driver);
+    const raw = allocationsFor(p, op.driver, scope);
     const allocs: LaborAllocation[] = raw
       .filter((a) => a.quantity > 0)
       .map((a) => {
@@ -296,9 +388,14 @@ export function computeMaterials(p: Project): MaterialsResult {
     qty.set(materialId, cur);
   };
 
-  for (const b of p.boxes) add(lib.boxTypes.find((t) => t.id === b.boxTypeId)?.materialId, 1, b.code);
+  const scope = resolveScope(p);
+  const cat = (k: string) => !scope.categories || scope.categories.has(k);
+  const ok = (id: string, roomId: string | null) => inScope(p, scope, id, roomId);
+
+  if (cat("doze")) for (const b of p.boxes) if (ok(b.id, b.roomId)) add(lib.boxTypes.find((t) => t.id === b.boxTypeId)?.materialId, 1, b.code);
 
   for (const c of p.circuits) {
+    if (c.existing || !cat("cablare") || !ok(c.id, null)) continue;
     const cables = p.cables.filter((x) => x.circuitId === c.id);
     if (cables.length > 0) {
       for (const cb of cables) {
@@ -312,10 +409,12 @@ export function computeMaterials(p: Project): MaterialsResult {
     }
   }
 
-  for (const r of p.routes)
-    for (const cd of r.conduits) add(lib.conduitTypes.find((t) => t.id === cd.conduitTypeId)?.materialId, conduitLength(r, cd).value ?? 0, cd.code);
+  if (cat("tuburi"))
+    for (const r of p.routes)
+      for (const cd of r.conduits) if (ok(cd.id, r.roomIds[0] ?? null)) add(lib.conduitTypes.find((t) => t.id === cd.conduitTypeId)?.materialId, conduitLength(r, cd).value ?? 0, cd.code);
 
   for (const t of p.panels) {
+    if (!cat("tablou") || (scope.panels && !scope.panels.has(t.id))) continue;
     add(lib.enclosureTypes.find((e) => e.id === t.enclosureTypeId)?.materialId, 1, t.code);
     for (const it of t.items) if (!it.isSpare) add(lib.protectionDevices.find((d) => d.id === it.protectionDeviceId)?.materialId, 1, it.code);
     if (t.parentPanelId) {

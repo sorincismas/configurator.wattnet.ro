@@ -27,7 +27,9 @@ const DRIVERS: { value: Operation["driver"]; label: string }[] = [
   { value: "feeder_m", label: "Metri alimentare intre tablouri" },
   { value: "panels", label: "Tablouri" },
   { value: "panel_items", label: "Aparate modulare in tablou" },
-  { value: "circuits", label: "Circuite" },
+  { value: "circuits", label: "Circuite (toate)" },
+  { value: "new_circuits", label: "Circuite noi" },
+  { value: "existing_circuits", label: "Circuite existente (reconectate)" },
   { value: "dd_connections", label: "Conexiuni in doze derivatie" },
   { value: "rooms", label: "Incaperi" },
 ];

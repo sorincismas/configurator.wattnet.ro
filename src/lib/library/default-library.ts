@@ -34,7 +34,7 @@ import type {
 
 export const DEFAULT_LIBRARY_VERSION = "2026.11-exemplu";
 /** creste cand aplicatia adauga elemente noi in biblioteca implicita */
-export const DEFAULTS_REV = 3;
+export const DEFAULTS_REV = 4;
 
 export const firm: FirmSettings = {
   name: "WATTNET",
@@ -385,10 +385,12 @@ const operations: Operation[] = [
   O({ id: "op-conex-dd", code: "OP009", name: "Conexiuni in doza de derivatie", category: "cablare", unit: "buc", rate: 10, timeMin: 8, driver: "dd_connections", planStageId: "ps-cablare", dependsOn: ["op-cablu"] }),
   O({ id: "op-tablou", code: "OP010", name: "Montare cutie tablou", category: "tablou", unit: "tablou", rate: 250, timeMin: 120, driver: "panels", wallSensitive: true, planStageId: "ps-tablouri", dependsOn: ["op-trasare"], parallelizable: false }),
   O({ id: "op-aparat-modular", code: "OP011", name: "Montare aparat modular pe sina DIN", category: "tablou", unit: "buc", rate: 15, timeMin: 8, driver: "panel_items", planStageId: "ps-tablouri", dependsOn: ["op-tablou"], parallelizable: false }),
-  O({ id: "op-conectare-circuit", code: "OP012", name: "Conectare circuit in tablou", category: "tablou", unit: "circuit", rate: 15, timeMin: 10, driver: "circuits", planStageId: "ps-tablouri", dependsOn: ["op-aparat-modular", "op-cablu"], parallelizable: false }),
+  O({ id: "op-conectare-circuit", code: "OP012", name: "Conectare circuit nou in tablou", category: "tablou", unit: "circuit", rate: 15, timeMin: 10, driver: "new_circuits", planStageId: "ps-tablouri", dependsOn: ["op-aparat-modular", "op-cablu"], parallelizable: false }),
   O({ id: "op-feeder", code: "OP013", name: "Pozare alimentare intre tablouri", category: "cablare", unit: "m", rate: 4, timeMin: 2, driver: "feeder_m", planStageId: "ps-cablare", dependsOn: ["op-copex"] }),
   O({ id: "op-etichetare", code: "OP014", name: "Etichetare circuite si tablou", category: "tablou", unit: "circuit", rate: 3, timeMin: 2, driver: "circuits", planStageId: "ps-tablouri", dependsOn: ["op-conectare-circuit"] }),
   O({ id: "op-verificari", code: "OP015", name: "Verificari aferente fazei la rosu", category: "verificari", unit: "circuit", rate: 20, timeMin: 15, driver: "circuits", planStageId: "ps-verificari", dependsOn: ["op-etichetare", "op-conex-dd"], parallelizable: false, subactions: ["Continuitate conductoare si PE", "Rezistenta de izolatie", "Inregistrare rezultate"] }),
+  O({ id: "op-demontare-tablou", code: "OP017", name: "Demontare tablou existent", category: "tablou", unit: "tablou", rate: 150, timeMin: 60, driver: "manual", planStageId: "ps-tablouri", parallelizable: false, subactions: ["Scoatere de sub tensiune si verificare lipsa tensiune", "Identificare si marcare circuite existente", "Demontare aparataj si cutie"] }),
+  O({ id: "op-reconectare-existent", code: "OP018", name: "Identificare si reconectare circuit existent", category: "tablou", unit: "circuit", rate: 20, timeMin: 15, driver: "existing_circuits", planStageId: "ps-tablouri", dependsOn: ["op-aparat-modular"], parallelizable: false, subactions: ["Identificare circuit", "Verificare stare conductoare", "Conectare in tabloul nou"] }),
   O({ id: "op-deplasare", code: "OP016", name: "Deplasare / organizare santier", category: "diverse", unit: "proiect", rate: 0, timeMin: 0, driver: "manual", planStageId: "ps-pregatire", active: true }),
 ];
 
