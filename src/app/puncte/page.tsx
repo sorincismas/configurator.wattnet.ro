@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { RequireProject } from "@/components/shell/AppShell";
 import { CATEGORY_LABEL, circuitOptions, levelOptions, roomLabel } from "@/components/install/common";
 import { RouteLinks } from "@/components/install/RouteLinks";
+import { defaultBoxTypeId, defaultDeviceTypeId } from "@/lib/library/defaults";
 import { routesForBox } from "@/lib/engine/links";
 import { Badge, Button, Card, Code, ConfirmButton, Empty, NumberInput, PageHeader, Select, TextInput, TrackedNumber, cx } from "@/components/ui";
 import { newBox, newDevice, removeBox, removeDevices } from "@/lib/model/factory";
@@ -13,21 +14,6 @@ import { useActiveProject, useUpdateActive } from "@/lib/store/store";
 
 type Up = ReturnType<typeof useUpdateActive>;
 
-/** butoane de adaugare rapida: tip aparat + daca se pune in doza */
-const QUICK: { label: string; deviceTypeId: string; box: boolean }[] = [
-  { label: "Priza", deviceTypeId: "dt-priza", box: true },
-  { label: "Priza dubla", deviceTypeId: "dt-priza-dubla", box: true },
-  { label: "Priza IP44", deviceTypeId: "dt-priza-ip", box: true },
-  { label: "Intrerupator", deviceTypeId: "dt-intr-simplu", box: true },
-  { label: "Intr. dublu", deviceTypeId: "dt-intr-dublu", box: true },
-  { label: "Cap-scara", deviceTypeId: "dt-intr-cap", box: true },
-  { label: "Iluminat", deviceTypeId: "dt-il-plafon", box: false },
-  { label: "Aplica", deviceTypeId: "dt-il-aplica", box: false },
-  { label: "Spot", deviceTypeId: "dt-il-spot", box: false },
-  { label: "Banda LED", deviceTypeId: "dt-il-led", box: false },
-  { label: "RJ45", deviceTypeId: "dt-rj45", box: true },
-  { label: "TV", deviceTypeId: "dt-tv", box: true },
-];
 
 function PointsPage() {
   const p = useActiveProject()!;
@@ -108,7 +94,8 @@ function RoomCard({ p, r, up, cat, selected, toggle }: { p: Project; r: Room; up
   const lib = p.library;
   const [qty, setQty] = useState<number | null>(1);
   const [boxQty, setBoxQty] = useState<number | null>(1);
-  const [boxType, setBoxType] = useState<string>("auto");
+  const [boxType, setBoxType] = useState<string>(defaultBoxTypeId(lib, "DA"));
+  const [deviceType, setDeviceType] = useState<string>(defaultDeviceTypeId(lib));
   /**
    * unde intra aparatele noi:
    *  "auto"            - dupa tipul aparatului: in doza noua (automat dupa module) sau fara doza
@@ -118,8 +105,7 @@ function RoomCard({ p, r, up, cat, selected, toggle }: { p: Project; r: Room; up
    *  "box:<id>"        - intr-o doza existenta
    */
   const [boxChoice, setBoxChoice] = useState<string>("auto");
-  const [ddType, setDdType] = useState<string>(lib.boxTypes.find((b) => b.kind === "DD")?.id ?? "");
-  const [other, setOther] = useState<string>("");
+  const [ddType, setDdType] = useState<string>(defaultBoxTypeId(lib, "DD"));
   const boxes = p.boxes.filter((b) => b.roomId === r.id);
   const devices = p.devices.filter((d) => d.roomId === r.id);
   const show = (d: Device) => cat === "all" || d.category === cat;
@@ -129,17 +115,12 @@ function RoomCard({ p, r, up, cat, selected, toggle }: { p: Project; r: Room; up
   const power = devices.reduce((s, d) => s + (d.powerW.value ?? 0), 0);
   const daTypes = lib.boxTypes.filter((b) => b.kind === "DA");
   const ddTypes = lib.boxTypes.filter((b) => b.kind === "DD");
-  // favorite: tipurile uzuale care exista in biblioteca + tipurile adaugate de utilizator
-  const builtin = new Set(QUICK.map((q) => q.deviceTypeId));
-  const favorites = [
-    ...QUICK.filter((q) => lib.deviceTypes.some((t) => t.id === q.deviceTypeId)),
-    ...lib.deviceTypes.filter((t) => !t.id.startsWith("dt-") && !builtin.has(t.id)).map((t) => ({ label: t.name, deviceTypeId: t.id, box: t.needsBox })),
-  ];
 
   /** tipul de doza pentru o doza noua: ales explicit sau automat dupa module */
   const pickBoxType = (choice: string, modules: number) => {
     if (choice && choice !== "auto") return choice;
-    const round = daTypes.find((b) => b.id === "bt-da-rot") ?? daTypes.find((b) => b.shape === "rotunda") ?? daTypes[0];
+    // automat: doza implicita din biblioteca daca incap modulele, altfel cea mai mica modulara potrivita
+    const round = daTypes.find((b) => b.id === defaultBoxTypeId(lib, "DA")) ?? daTypes[0];
     if (modules <= (round?.modules ?? 2)) return round?.id ?? null;
     return daTypes.filter((b) => b.modules >= modules).sort((a, b) => a.modules - b.modules)[0]?.id ?? round?.id ?? null;
   };
@@ -194,16 +175,22 @@ function RoomCard({ p, r, up, cat, selected, toggle }: { p: Project; r: Room; up
           <span className="w-16 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Doze</span>
           <NumberInput className="w-14" value={boxQty} min={1} onChange={setBoxQty} />
           <span className="text-xs text-ink-3">x</span>
-          <Select className="w-60" value={boxType} onChange={setBoxType} options={[{ value: "auto", label: "doza aparat implicita (rotunda)" }, ...daTypes.map((b) => ({ value: b.id, label: b.name }))]} />
+          <Select className="w-64" value={boxType} onChange={setBoxType} options={daTypes.map((b) => ({ value: b.id, label: b.name + (b.isDefault ? " (implicit)" : "") }))} />
           <Button size="sm" onClick={addEmptyBox}>+ Doza aparat</Button>
           <span className="ml-3 text-xs text-ink-2">derivatie:</span>
-          <Select className="w-52" value={ddType} onChange={setDdType} options={ddTypes.map((b) => ({ value: b.id, label: b.name }))} />
+          <Select className="w-56" value={ddType} onChange={setDdType} options={ddTypes.map((b) => ({ value: b.id, label: b.name + (b.isDefault ? " (implicit)" : "") }))} />
           <Button size="sm" onClick={() => up((x) => { for (let k = 0; k < Math.max(1, Math.min(30, boxQty ?? 1)); k++) x.boxes.push(newBox(x, "DD", r.id, ddType || null)); }, `Doza derivatie in ${r.name}`)}>+ Doza derivatie</Button>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 border-t border-line pt-2">
           <span className="w-16 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Aparate</span>
           <NumberInput className="w-14" value={qty} min={1} onChange={setQty} />
           <span className="text-xs text-ink-3">x</span>
+          <Select
+            className="w-72"
+            value={deviceType}
+            onChange={setDeviceType}
+            options={lib.deviceTypes.map((d) => ({ value: d.id, label: `${CATEGORY_LABEL[d.category] ?? d.category}: ${d.name}${d.isDefault ? " (implicit)" : ""}` }))}
+          />
           <span className="text-xs text-ink-2">montate:</span>
           <Select
             className="w-72"
@@ -218,21 +205,7 @@ function RoomCard({ p, r, up, cat, selected, toggle }: { p: Project; r: Room; up
               ...da.map((b) => ({ value: `box:${b.id}`, label: `in doza existenta ${b.code} (${usedModules(b.id)}/${b.modules} mod.)` })),
             ]}
           />
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="w-16" />
-          {favorites.map((q) => (
-            <Button key={q.deviceTypeId} size="sm" onClick={() => add(q.deviceTypeId)}>
-              + {q.label}
-            </Button>
-          ))}
-          <Select
-            className="w-56"
-            value={other}
-            placeholder="+ alt aparat din biblioteca…"
-            onChange={(v) => { if (v) add(v); setOther(""); }}
-            options={lib.deviceTypes.map((d) => ({ value: d.id, label: `${CATEGORY_LABEL[d.category] ?? d.category}: ${d.name}` }))}
-          />
+          <Button size="sm" variant="primary" onClick={() => add(deviceType)} disabled={!deviceType}>+ Adauga aparat</Button>
         </div>
       </div>
 
