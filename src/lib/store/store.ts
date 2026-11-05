@@ -11,6 +11,7 @@ import { createDefaultLibrary } from "../library/default-library";
 import { applyTemplate, createEmptyProject, nowISO } from "../model/factory";
 import { migrateLibrary, migrateProject, projectAsTemplate } from "../io/files";
 import { syncCables } from "../engine/cables";
+import { syncCatalogs } from "../library/sync";
 import type { Library, Project } from "../model/types";
 
 const hasIDB = () => typeof indexedDB !== "undefined";
@@ -78,6 +79,7 @@ export const useApp = create<AppState>()(
       importProject: (src, mode) => {
         const s = getState();
         let p = migrateProject(src);
+        p.library = syncCatalogs(p.library, s.library);
         let seq = s.projectSeq;
         if (mode === "sablon" || s.projects[p.id]) {
           seq += 1;
@@ -132,19 +134,22 @@ export const useApp = create<AppState>()(
         setState({ projects: { ...s.projects, [id]: { ...p, lastExportedAt: nowISO() } } });
       },
 
-      setLibrary: (lib) => setState({ library: migrateLibrary(lib), libraryUpdatedAt: nowISO() }),
+      setLibrary: (lib) => {
+        const next = migrateLibrary(lib);
+        const s = getState();
+        const projects = Object.fromEntries(Object.entries(s.projects).map(([id, p]) => [id, { ...p, library: syncCatalogs(p.library, next) }]));
+        setState({ library: next, libraryUpdatedAt: nowISO(), projects });
+      },
 
       updateLibrary: (recipe) => {
         const s = getState();
         const next = structuredClone(s.library);
         recipe(next);
         next.meta.updatedAt = nowISO();
-        // datele firmei (identitate, serii de numerotare) sunt comune tuturor proiectelor;
-        // tarifele, materialele si regulile raman pe proiect pana la aplicarea explicita
-        const firmChanged = JSON.stringify(next.firm) !== JSON.stringify(s.library.firm);
-        const projects = firmChanged
-          ? Object.fromEntries(Object.entries(s.projects).map(([id, p]) => [id, { ...p, library: { ...p.library, firm: structuredClone(next.firm) } }]))
-          : s.projects;
+        // datele firmei si catalogul tehnic (tipuri doze, aparate, cabluri ...) sunt comune
+        // tuturor proiectelor; tarifele, preturile si regulile raman pe proiect pana la
+        // aplicarea explicita (vezi lib/library/sync.ts)
+        const projects = Object.fromEntries(Object.entries(s.projects).map(([id, p]) => [id, { ...p, library: syncCatalogs(p.library, next) }]));
         setState({ library: next, libraryUpdatedAt: next.meta.updatedAt, projects });
       },
 
@@ -178,7 +183,11 @@ export const useApp = create<AppState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.library = migrateLibrary(state.library);
-          for (const k of Object.keys(state.projects)) state.projects[k] = migrateProject(state.projects[k]);
+          for (const k of Object.keys(state.projects)) {
+            const p = migrateProject(state.projects[k]);
+            p.library = syncCatalogs(p.library, state.library);
+            state.projects[k] = p;
+          }
         }
         useApp.getState().setHydrated();
       },

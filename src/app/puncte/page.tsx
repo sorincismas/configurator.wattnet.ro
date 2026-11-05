@@ -107,8 +107,10 @@ function BulkBar({ p, up, ids, clear }: { p: Project; up: Up; ids: string[]; cle
 function RoomCard({ p, r, up, cat, selected, toggle }: { p: Project; r: Room; up: Up; cat: string; selected: Set<string>; toggle: (id: string, on: boolean) => void }) {
   const lib = p.library;
   const [qty, setQty] = useState<number | null>(1);
-  const [target, setTarget] = useState<string>("new"); // "new" = doza noua, altfel id doza DA
-  const [dedicated, setDedicated] = useState<string>("");
+  // doza pentru aparatele noi: "auto" = doza noua aleasa dupa module, "type:<id>" = doza noua de tipul ales, "box:<id>" = doza existenta
+  const [boxChoice, setBoxChoice] = useState<string>("auto");
+  const [ddType, setDdType] = useState<string>(lib.boxTypes.find((b) => b.kind === "DD")?.id ?? "");
+  const [other, setOther] = useState<string>("");
   const boxes = p.boxes.filter((b) => b.roomId === r.id);
   const devices = p.devices.filter((d) => d.roomId === r.id);
   const show = (d: Device) => cat === "all" || d.category === cat;
@@ -116,26 +118,49 @@ function RoomCard({ p, r, up, cat, selected, toggle }: { p: Project; r: Room; up
   const dd = boxes.filter((b) => b.kind === "DD");
   const loose = devices.filter((d) => !d.boxId && show(d));
   const power = devices.reduce((s, d) => s + (d.powerW.value ?? 0), 0);
+  const daTypes = lib.boxTypes.filter((b) => b.kind === "DA");
+  const ddTypes = lib.boxTypes.filter((b) => b.kind === "DD");
+  // favorite: tipurile uzuale care exista in biblioteca + tipurile adaugate de utilizator
+  const builtin = new Set(QUICK.map((q) => q.deviceTypeId));
+  const favorites = [
+    ...QUICK.filter((q) => lib.deviceTypes.some((t) => t.id === q.deviceTypeId)),
+    ...lib.deviceTypes.filter((t) => !t.id.startsWith("dt-") && !builtin.has(t.id)).map((t) => ({ label: t.name, deviceTypeId: t.id, box: t.needsBox })),
+  ];
 
-  const add = (deviceTypeId: string, inBox: boolean, single = false) => {
-    const n = single ? 1 : Math.max(1, Math.min(30, qty ?? 1));
+  /** tipul de doza pentru o doza noua */
+  const newBoxType = (modules: number) => {
+    if (boxChoice.startsWith("type:")) return boxChoice.slice(5);
+    const round = daTypes.find((b) => b.id === "bt-da-rot") ?? daTypes.find((b) => b.shape === "rotunda") ?? daTypes[0];
+    if (modules <= (round?.modules ?? 2)) return round?.id ?? null;
+    return daTypes.filter((b) => b.modules >= modules).sort((a, b) => a.modules - b.modules)[0]?.id ?? round?.id ?? null;
+  };
+
+  const add = (deviceTypeId: string, single = false) => {
     const dt = lib.deviceTypes.find((t) => t.id === deviceTypeId);
+    if (!dt) return;
+    const n = single ? 1 : Math.max(1, Math.min(30, qty ?? 1));
     up((x) => {
       for (let k = 0; k < n; k++) {
         let boxId: string | null = null;
-        if (inBox) {
-          if (target !== "new" && x.boxes.some((b) => b.id === target)) boxId = target;
+        if (dt.needsBox) {
+          const existing = boxChoice.startsWith("box:") ? boxChoice.slice(4) : null;
+          if (existing && x.boxes.some((b) => b.id === existing)) boxId = existing;
           else {
-            const modules = dt?.modules ?? 2;
-            const bt = modules > 2 ? lib.boxTypes.find((b) => b.kind === "DA" && b.shape === "modulara" && b.modules >= modules) : lib.boxTypes.find((b) => b.id === "bt-da-rot");
-            const b = newBox(x, "DA", r.id, bt?.id ?? null);
+            const b = newBox(x, "DA", r.id, newBoxType(dt.modules));
             x.boxes.push(b);
             boxId = b.id;
           }
         }
         x.devices.push(newDevice(x, r.id, deviceTypeId, undefined, boxId));
       }
-    }, `${n} x ${dt?.name ?? "aparat"} in ${r.name}`);
+    }, `${n} x ${dt.name} in ${r.name}`);
+  };
+
+  const addEmptyBox = () => {
+    const n = Math.max(1, Math.min(30, qty ?? 1));
+    up((x) => {
+      for (let k = 0; k < n; k++) x.boxes.push(newBox(x, "DA", r.id, newBoxType(0)));
+    }, `${n} doze aparat in ${r.name}`);
   };
 
   return (
@@ -147,26 +172,42 @@ function RoomCard({ p, r, up, cat, selected, toggle }: { p: Project; r: Room; up
         </span>
       }
     >
-      <div className="mb-3 flex flex-wrap items-center gap-1.5 rounded-md bg-paper p-2">
-        <NumberInput className="w-14" value={qty} min={1} onChange={setQty} />
-        <span className="text-xs text-ink-3">x</span>
-        {QUICK.map((q) => (
-          <Button key={q.deviceTypeId} size="sm" onClick={() => add(q.deviceTypeId, q.box)}>
-            + {q.label}
-          </Button>
-        ))}
-        <Select
-          className="w-48"
-          value={dedicated}
-          placeholder="+ Consumator dedicat…"
-          onChange={(v) => { if (v) add(v, false, true); setDedicated(""); }}
-          options={lib.deviceTypes.filter((d) => d.category === "consumator_dedicat" || d.category === "comanda" || d.category === "altul").map((d) => ({ value: d.id, label: d.name }))}
-        />
-        <Button size="sm" onClick={() => up((x) => void x.boxes.push(newBox(x, "DD", r.id, "bt-dd-100")), `Doza derivatie in ${r.name}`)}>+ Doza derivatie</Button>
-        <span className="ml-auto flex items-center gap-1 text-xs text-ink-2">
-          Aparatele cu doza intra in:
-          <Select className="w-44" value={target} onChange={setTarget} options={[{ value: "new", label: "doza noua (implicit)" }, ...da.map((b) => ({ value: b.id, label: `${b.code} - ${lib.boxTypes.find((t) => t.id === b.boxTypeId)?.name ?? "doza"}` }))]} />
-        </span>
+      <div className="mb-3 space-y-2 rounded-md bg-paper p-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="w-16 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Aparate</span>
+          <NumberInput className="w-14" value={qty} min={1} onChange={setQty} />
+          <span className="text-xs text-ink-3">x</span>
+          {favorites.map((q) => (
+            <Button key={q.deviceTypeId} size="sm" onClick={() => add(q.deviceTypeId)} title={q.box ? "se monteaza in doza aleasa mai jos" : "fara doza"}>
+              + {q.label}
+            </Button>
+          ))}
+          <Select
+            className="w-56"
+            value={other}
+            placeholder="+ alt aparat din biblioteca…"
+            onChange={(v) => { if (v) add(v); setOther(""); }}
+            options={lib.deviceTypes.map((d) => ({ value: d.id, label: `${CATEGORY_LABEL[d.category] ?? d.category}: ${d.name}` }))}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="w-16 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Doze</span>
+          <span className="text-xs text-ink-2">aparatele cu doza intra in:</span>
+          <Select
+            className="w-64"
+            value={boxChoice}
+            onChange={setBoxChoice}
+            options={[
+              { value: "auto", label: "doza noua - aleasa dupa module" },
+              ...daTypes.map((b) => ({ value: `type:${b.id}`, label: `doza noua: ${b.name}` })),
+              ...da.map((b) => ({ value: `box:${b.id}`, label: `doza existenta ${b.code} (${lib.boxTypes.find((t) => t.id === b.boxTypeId)?.name ?? "?"})` })),
+            ]}
+          />
+          <Button size="sm" onClick={addEmptyBox} title="doza aparat fara aparate (le poti adauga apoi alegand doza existenta)">+ Doza aparat goala</Button>
+          <span className="ml-3 text-xs text-ink-2">derivatie:</span>
+          <Select className="w-52" value={ddType} onChange={setDdType} options={ddTypes.map((b) => ({ value: b.id, label: b.name }))} />
+          <Button size="sm" onClick={() => up((x) => void x.boxes.push(newBox(x, "DD", r.id, ddType || null)), `Doza derivatie in ${r.name}`)}>+ Doza derivatie</Button>
+        </div>
       </div>
 
       {boxes.length === 0 && loose.length === 0 ? (
