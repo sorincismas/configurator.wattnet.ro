@@ -477,6 +477,28 @@ export interface ProformaSettings {
   notes: string;
 }
 
+/**
+ * Lucru rapid (faza la rosu): punctele se impart automat pe circuite, iar
+ * lungimile de cablu, sant si tub se estimeaza pe proiect cand traseele nu
+ * sunt modelate pe segmente. O lungime masurata pe circuit are prioritate.
+ */
+export interface FastSettings {
+  /** metri de cablu intre doua puncte consecutive ale circuitului */
+  metersPerPoint: number;
+  /** distanta medie de la tablou la primul punct al circuitului (m) */
+  panelDistanceM: number;
+  /** santul estimat ca procent din lungimea de cablu */
+  chasePct: number;
+  /** cablu ingropat direct (NYY-J), fara tub copex */
+  noConduit: boolean;
+  /** tablou nou (se monteaza cutia) sau existent (doar conectarea circuitelor) */
+  panelMode: "nou" | "existent";
+  /** numarul maxim de puncte (doze) pe un circuit de prize / iluminat la impartirea automata */
+  maxPointsPerCircuit: number;
+  /** familia de cablu preferata la propunerea sectiunii (ex. NYY-J) */
+  cableFamily: string;
+}
+
 export interface QuoteSettings {
   scope?: QuoteScope;
   offerDate?: ISODate | null;
@@ -600,6 +622,7 @@ export interface Project {
   globalSimultaneity: Tracked<number>;
 
   quote: QuoteSettings;
+  fast: FastSettings;
   operationOverrides: OperationLineOverride[];
   extraCosts: ExtraCost[];
 
@@ -695,6 +718,8 @@ export interface DeviceType {
   materialId: ID | null;
   /** tipul preselectat la adaugarea aparatelor */
   isDefault?: boolean;
+  /** litera pentru adaugarea rapida (ex. P, L, I) */
+  shortcut?: string;
 }
 
 export interface BoxType {
@@ -804,6 +829,7 @@ export type QuantityDriver =
   | "feeder_m"
   | "existing_circuits" // circuite existente reconectate
   | "new_circuits" // circuite noi (fara cele existente)
+  | "end_points" // capete de circuit de legat: doze aparat + puncte fara doza
   | "rooms";
 
 export interface Operation {

@@ -111,12 +111,53 @@ export function circuitCableLength(p: Project, circuit: Circuit): Qty {
   const cables = p.cables.filter((c) => c.circuitId === circuit.id);
   if (cables.length > 0) return sumQty(cables.map((c) => cableLength(p, c)));
   const e = circuit.estimatedLengthM;
-  if (e.value === null) return { value: null, certainty: "necunoscut", missing: 1 };
-  return { value: e.value, certainty: isMeasured(e) ? "masurat" : "estimat", missing: 0 };
+  if (e.value !== null) return { value: e.value, certainty: isMeasured(e) ? "masurat" : "estimat", missing: 0 };
+  const auto = autoCircuitLength(p, circuit);
+  if (auto === null) return { value: null, certainty: "necunoscut", missing: 1 };
+  return { value: auto, certainty: "estimat", missing: 0 };
+}
+
+/** capetele de legat ale unui circuit: dozele aparat distincte + punctele fara doza */
+export function circuitEndPoints(p: Project, circuit: Circuit): number {
+  const devs = p.devices.filter((d) => d.circuitId === circuit.id);
+  const boxes = new Set(devs.map((d) => d.boxId).filter(Boolean));
+  return boxes.size + devs.filter((d) => !d.boxId).length;
+}
+
+/** punctele care se numara la limita pe circuit: fara dozele care au doar intrerupatoare */
+export function circuitLimitPoints(p: Project, circuit: Circuit): number {
+  const devs = p.devices.filter((d) => d.circuitId === circuit.id && d.category !== "intrerupator");
+  const boxes = new Set(devs.map((d) => d.boxId).filter(Boolean));
+  return boxes.size + devs.filter((d) => !d.boxId).length;
+}
+
+/**
+ * Lungimea estimata automat (lucru rapid): distanta pana la tablou + metri pe punct.
+ * Nu se aplica circuitelor existente sau fara puncte.
+ */
+export function autoCircuitLength(p: Project, circuit: Circuit): number | null {
+  if (circuit.existing || !p.fast) return null;
+  const n = circuit.usage === "feeder" ? 0 : circuitEndPoints(p, circuit) || circuit.declaredPoints || 0;
+  if (n === 0) return null;
+  return round(p.fast.panelDistanceM + n * p.fast.metersPerPoint, 1);
+}
+
+/** proiect fara trasee modelate: santul si tubul se estimeaza din lungimea cablurilor */
+export const usesEstimatedRoutes = (p: Project) => p.routes.length === 0;
+
+/** metri de sant estimati pentru un circuit (lucru rapid) */
+export function estimatedChaseForCircuit(p: Project, circuit: Circuit): number {
+  if (circuit.existing) return 0;
+  const len = circuitCableLength(p, circuit).value ?? 0;
+  return round((len * (p.fast?.chasePct ?? 100)) / 100, 2);
 }
 
 /** metri de sant: fiecare traseu care necesita sant se numara O SINGURA DATA */
 export function chaseLength(p: Project): Qty {
+  if (usesEstimatedRoutes(p)) {
+    const items = p.circuits.filter((c) => !c.existing).map((c) => ({ value: estimatedChaseForCircuit(p, c), certainty: "estimat" as Certainty, missing: 0 }));
+    return items.some((q) => q.value) ? sumQty(items) : { value: 0, certainty: "necunoscut", missing: 0 };
+  }
   return sumQty(p.routes.filter((r) => r.requiresChase).map(routeLength));
 }
 
@@ -125,6 +166,11 @@ export function totalRouteLength(p: Project): Qty {
 }
 
 export function totalConduitLength(p: Project): Qty {
+  if (usesEstimatedRoutes(p)) {
+    if (p.fast?.noConduit) return { value: 0, certainty: "necunoscut", missing: 0 };
+    const items = p.circuits.filter((c) => !c.existing).map((c) => circuitCableLength(p, c));
+    return items.length ? { ...sumQty(items), certainty: "estimat" } : { value: 0, certainty: "necunoscut", missing: 0 };
+  }
   return sumQty(p.routes.flatMap((r) => r.conduits.map((c) => conduitLength(r, c))));
 }
 

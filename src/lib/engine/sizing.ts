@@ -211,15 +211,19 @@ export function proposeSizing(p: Project, c: Circuit): SizingProposal {
   if (!pd) return { ok: false, reason: `Nu exista in catalog un MCB ${poles} de minim ${floor} A. Adauga-l in Biblioteca → Aparate tablou.`, ratingA: inA, cableTypeId: null, protectionDeviceId: null, steps };
 
   const loaded = a.system === "tri" ? 3 : 2;
+  // familia preferata: cea a cablului actual, altfel cea setata pe proiect (ex. NYY-J)
+  const fam = (a.cable?.name ?? p.fast?.cableFamily ?? "").split(" ")[0].toUpperCase();
+  const famRank = (t: { name: string }) => (fam && t.name.toUpperCase().startsWith(fam + " ") ? 0 : 1);
   const prefConstruction = a.cable?.construction ?? (method === "A1" || method === "B1" ? "fire_in_tub" : "cablu");
   const candidates = lib.cableTypes
     .filter((t) => t.loadedConductors === loaded && t.conductorMaterial === "cupru")
-    .sort((x, y) => x.crossSectionMm2 - y.crossSectionMm2 || (x.construction === prefConstruction ? -1 : 1));
+    .sort((x, y) => x.crossSectionMm2 - y.crossSectionMm2 || (x.construction === prefConstruction ? -1 : 1) - (y.construction === prefConstruction ? -1 : 1) || famRank(x) - famRank(y));
   const minS = a.minSection ?? 1.5;
   const up = a.duUpstreamPct ?? 0;
   for (const ct of candidates) {
     if (ct.crossSectionMm2 < minS) continue;
     if (ct.construction !== prefConstruction && candidates.some((o) => o.crossSectionMm2 === ct.crossSectionMm2 && o.construction === prefConstruction)) continue;
+    if (famRank(ct) === 1 && candidates.some((o) => o.crossSectionMm2 === ct.crossSectionMm2 && o.construction === ct.construction && famRank(o) === 0)) continue;
     const iz = ampacity(lib, ct, method, c.ambientTempC, c.groupedCircuits);
     if (iz.izCorrected === null) continue;
     if (iz.izCorrected < inA) {

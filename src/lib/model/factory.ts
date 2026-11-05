@@ -2,6 +2,7 @@ import { takeCode, uid } from "./ids";
 import {
   SCHEMA_VERSION,
   type Building,
+  type FastSettings,
   type BuildingKind,
   type Level,
   type Library,
@@ -29,6 +30,10 @@ export function tracked<T = number>(value: T | null, provenance: Tracked<T>["pro
 
 export function projectCode(seq: number, date = new Date()): string {
   return `WN-${date.getFullYear()}-${String(seq).padStart(3, "0")}`;
+}
+
+export function defaultFastSettings(noConduit = true): FastSettings {
+  return { metersPerPoint: 4, panelDistanceM: 10, chasePct: 80, noConduit, panelMode: "nou", maxPointsPerCircuit: 6, cableFamily: "NYY-J" };
 }
 
 export function createEmptyProject(library: Library, seq = 1): Project {
@@ -78,6 +83,7 @@ export function createEmptyProject(library: Library, seq = 1): Project {
     panels: [],
     globalSimultaneity: tracked<number>(null, "estimat"),
     quote: { includeMaterials: false, laborDiscountPct: 0, materialsDiscountPct: 0, validityDays: 30, projectFactorIds: [] },
+    fast: defaultFastSettings(),
     operationOverrides: [],
     extraCosts: [],
     team: { electricians: 1, helpers: 0, helperEfficiency: 0.5, hoursPerDay: 8, workDaysPerWeek: 5, startDate: null },

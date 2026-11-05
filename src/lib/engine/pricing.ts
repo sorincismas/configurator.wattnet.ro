@@ -10,6 +10,8 @@ import {
   conduitLength,
   round,
   routeLength,
+  estimatedChaseForCircuit,
+  usesEstimatedRoutes,
 } from "./measure";
 
 /* ---------------------------- alocari ------------------------------ */
@@ -156,6 +158,13 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
         ...p.panels.map((t) => ({ roomId: t.roomId, id: t.id })),
       ]);
     case "route_chase_m":
+      if (usesEstimatedRoutes(p))
+        return groupByRoom(
+          p.circuits
+            .filter((c) => !c.existing)
+            .map((c) => ({ roomId: p.devices.find((d) => d.circuitId === c.id)?.roomId ?? null, id: c.id, qty: estimatedChaseForCircuit(p, c) }))
+            .filter((x) => x.qty > 0),
+        );
       return groupByRoom(
         p.routes
           .filter((r) => r.requiresChase)
@@ -167,7 +176,21 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
           })),
       );
     case "conduit_m":
+      if (usesEstimatedRoutes(p)) {
+        if (p.fast?.noConduit) return [];
+        return groupByRoom(
+          p.circuits
+            .filter((c) => !c.existing)
+            .map((c) => ({ roomId: p.devices.find((d) => d.circuitId === c.id)?.roomId ?? null, id: c.id, qty: circuitCableLength(p, c).value ?? 0 }))
+            .filter((x) => x.qty > 0),
+        );
+      }
       return groupByRoom(p.routes.flatMap((r) => r.conduits.map((c) => ({ roomId: r.roomIds[0] ?? null, id: c.id, qty: conduitLength(r, c).value ?? 0 }))));
+    case "end_points":
+      return groupByRoom([
+        ...p.boxes.filter((b) => b.kind === "DA" && p.devices.some((d) => d.boxId === b.id && d.category !== "curenti_slabi")).map((b) => ({ roomId: b.roomId, id: b.id })),
+        ...p.devices.filter((d) => !d.boxId && d.circuitId && d.category !== "curenti_slabi").map((d) => ({ roomId: d.roomId, id: d.id })),
+      ]);
     case "new_circuits":
       return groupByRoom(
         p.circuits.filter((c) => c.usage !== "curenti_slabi" && !c.existing).map((c) => ({ roomId: p.panels.find((t) => t.id === c.panelId)?.roomId ?? null, id: c.id })),
@@ -182,6 +205,8 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
         }),
       );
     case "panels":
+      // tablou existent: nu se monteaza cutie noua
+      if (p.fast?.panelMode === "existent") return [];
       return groupByRoom(p.panels.map((t) => ({ roomId: t.roomId, id: t.id })));
     case "panel_items":
       return groupByRoom(p.panels.flatMap((t) => t.items.filter((i) => !i.isSpare).map((i) => ({ roomId: t.roomId, id: i.id }))));
@@ -409,13 +434,17 @@ export function computeMaterials(p: Project): MaterialsResult {
     }
   }
 
+  if (cat("tuburi") && usesEstimatedRoutes(p) && !p.fast?.noConduit) {
+    const cd = lib.conduitTypes.find((t) => t.id === "cd-20") ?? lib.conduitTypes[0];
+    for (const c of p.circuits) if (!c.existing && ok(c.id, null)) add(cd?.materialId, circuitCableLength(p, c).value ?? 0, `${c.code} tub estimat`);
+  }
   if (cat("tuburi"))
     for (const r of p.routes)
       for (const cd of r.conduits) if (ok(cd.id, r.roomIds[0] ?? null)) add(lib.conduitTypes.find((t) => t.id === cd.conduitTypeId)?.materialId, conduitLength(r, cd).value ?? 0, cd.code);
 
   for (const t of p.panels) {
     if (!cat("tablou") || (scope.panels && !scope.panels.has(t.id))) continue;
-    add(lib.enclosureTypes.find((e) => e.id === t.enclosureTypeId)?.materialId, 1, t.code);
+    if (p.fast?.panelMode !== "existent") add(lib.enclosureTypes.find((e) => e.id === t.enclosureTypeId)?.materialId, 1, t.code);
     for (const it of t.items) if (!it.isSpare) add(lib.protectionDevices.find((d) => d.id === it.protectionDeviceId)?.materialId, 1, it.code);
     if (t.parentPanelId) {
       const ct = lib.cableTypes.find((c) => c.id === t.feeder.cableTypeId);
