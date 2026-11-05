@@ -42,3 +42,45 @@ export function printElement(el: Element | null, landscapeA3 = true) {
   window.addEventListener("afterprint", done);
   window.print();
 }
+
+/**
+ * Tiparire pe mai multe pagini: continutul este copiat intr-un iframe ascuns,
+ * impreuna cu stilurile aplicatiei, si tiparit acolo (paginare reala, pagini
+ * A4 portret si pagini peisaj pentru scheme: clasa .page-landscape).
+ */
+export function printPages(el: Element | null, title = "WATTNET") {
+  if (!el) return;
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument!;
+  const styles = [...document.querySelectorAll('link[rel="stylesheet"], style')].map((n) => n.outerHTML).join("\n");
+  doc.open();
+  doc.write(`<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><title>${title}</title>${styles}
+<style>
+  @page { size: A4 portrait; margin: 12mm 12mm 14mm 12mm; }
+  @page landscape { size: A4 landscape; margin: 8mm; }
+  html, body { background: #fff !important; }
+  .page { break-after: page; }
+  .page:last-child { break-after: auto; }
+  .page-landscape { page: landscape; }
+  .avoid-break { break-inside: avoid; }
+  .dossier { background: #fff !important; padding: 0 !important; }
+  .dossier .page { width: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 0 22px 0 !important; box-shadow: none !important; }
+  .dossier .page > .absolute.bottom-3 { left: 0 !important; right: 0 !important; bottom: 0 !important; }
+</style></head><body>${el.outerHTML}</body></html>`);
+  doc.close();
+  const go = () => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => iframe.remove(), 1500);
+  };
+  // asteptam incarcarea stilurilor
+  if (doc.readyState === "complete") setTimeout(go, 300);
+  else iframe.onload = () => setTimeout(go, 300);
+}
