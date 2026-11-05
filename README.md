@@ -3,7 +3,7 @@
 Aplicatie Next.js + TypeScript pentru ofertarea si planificarea lucrarilor electrice WATTNET.
 Repo separat de site-ul static `wattnet.ro`, publicat ca proiect Vercel separat.
 
-## Faza 1 — lucrari „la rosu” (ce face acum)
+## Faza 1 — lucrari „la rosu” (ce face acum).
 
 - **Proiect si beneficiar**: cod, tip cladire, alimentare, date client, siguranta generala (A) →
   putere maxima absorbita (mono 230·I·cosφ, tri √3·400·I·cosφ) si putere instalata estimata.
