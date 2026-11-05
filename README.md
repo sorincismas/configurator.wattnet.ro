@@ -57,5 +57,5 @@ Pe Vercel: framework Next.js, comanda `npm run build`, director de iesire `out` 
 | 2 Model instalatie | doze DA/DD, aparate, consumatori, circuite, trasee, copex, cabluri | **gata** |
 | 3 Tablouri si calcule | dimensionare asistata I7, tablouri, vedere DIN, schema monofilara, verificari | **gata** |
 | 4 Deviz si timp | deviz manopera / + materiale, subtotaluri, tarif orar implicit, oferta si proforma (simplificat / detaliat) | **gata** |
-| 5 Documentatie | dosar PDF 14 capitole, versiuni emise | |
+| 5 Dosar si versiuni | dosar PDF 14 capitole (complet sau pe capitole), emitere Rev.NN cu instantaneu inghetat, comparatie cu proiectul curent, registru observatii | **gata** |
 | 6 Plan executie | operatii, dependente, echipa, durata | motor initial |
