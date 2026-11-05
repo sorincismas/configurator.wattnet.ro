@@ -153,7 +153,7 @@ export const useApp = create<AppState>()(
       },
     }),
     {
-      name: "wattnet-configurator",
+      name: "configurator.wattnet.ro",
       version: 1,
       storage: createJSONStorage(() => idbStorage),
       partialize: (s) => ({

@@ -9,7 +9,7 @@ import { uid } from "../model/ids";
 import { nowISO, projectCode } from "../model/factory";
 import { SCHEMA_VERSION, type Library, type LibraryFile, type Project, type ProjectFile } from "../model/types";
 
-export const APP_ID = "wattnet-configurator@0.1";
+export const APP_ID = "configurator.wattnet.ro@0.1";
 
 const arr = z.array(z.any());
 
