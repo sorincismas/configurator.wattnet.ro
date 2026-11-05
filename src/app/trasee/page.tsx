@@ -1,9 +1,10 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RequireProject } from "@/components/shell/AppShell";
 import { levelOptions, roomLabel } from "@/components/install/common";
 import { Badge, Button, Card, Checkbox, Code, ConfirmButton, Empty, NumberInput, PageHeader, Select, Table, TextInput, TrackedNumber, cx } from "@/components/ui";
 import { estimateRouteLengthForRoom } from "@/lib/engine/cables";
+import { addBoxCircuitsToRoute, boxLabel, ensureRouteRoomForNode, missingCircuitsOnRoute } from "@/lib/engine/links";
 import { cableLength, chaseLength, routeLength, totalCableLength, totalConduitLength, type Qty } from "@/lib/engine/measure";
 import { fmtNum, NA } from "@/lib/format";
 import { newConduit, newRoute, newSegment, tracked } from "@/lib/model/factory";
@@ -20,6 +21,19 @@ function RoutesPage() {
   const up = useUpdateActive();
   const [level, setLevel] = useState("all");
   const [newRoom, setNewRoom] = useState<string>(p.rooms[0]?.id ?? "");
+  // deschidere din Doze si aparate: /trasee/#TR001 => derulare si evidentiere
+  useEffect(() => {
+    const code = decodeURIComponent(window.location.hash.slice(1));
+    if (!code) return;
+    const t = setTimeout(() => {
+      const el = document.getElementById(code);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("ring-2", "ring-volt", "rounded-lg");
+      setTimeout(() => el.classList.remove("ring-2", "ring-volt"), 2500);
+    }, 50);
+    return () => clearTimeout(t);
+  }, []);
   const routes = p.routes.filter((r) => level === "all" || r.roomIds.some((id) => p.rooms.find((x) => x.id === id)?.levelId === level) || r.roomIds.length === 0);
 
   return (
@@ -81,19 +95,21 @@ function Stat({ label, value, sub, q }: { label: string; value?: string; sub?: s
   );
 }
 
-/** selectie capat de segment: tablou, doza, aparat sau text liber */
+/** selectie capat de segment: tablou, doza (cu eticheta completa) sau text liber */
 function NodeSelect({ p, r, node, onChange }: { p: Project; r: Route; node: NodeRef; onChange: (n: NodeRef) => void }) {
-  const boxes = p.boxes.filter((b) => r.roomIds.includes(b.roomId) || b.kind === "DD");
+  // dozele din incaperile traseului primele, apoi restul; DD inaintea DA in aceeasi incapere
+  const inRoute = (roomId: string) => (r.roomIds.includes(roomId) ? 0 : 1);
+  const boxes = [...p.boxes].sort((a, b) => inRoute(a.roomId) - inRoute(b.roomId) || a.roomId.localeCompare(b.roomId) || a.kind.localeCompare(b.kind) * -1 || a.code.localeCompare(b.code));
   const value = node.kind === "free" ? "free:" : `${node.kind}:${node.refId}`;
   const options = [
     { value: "free:", label: "text liber…" },
     ...p.panels.map((t) => ({ value: `panel:${t.id}`, label: `${t.code} ${t.name}` })),
-    ...boxes.map((b) => ({ value: `box:${b.id}`, label: `${b.code} (${p.rooms.find((x) => x.id === b.roomId)?.name ?? ""})` })),
+    ...boxes.map((b) => ({ value: `box:${b.id}`, label: (inRoute(b.roomId) ? "↗ " : "") + boxLabel(p, b) })),
   ];
   return (
     <div className="flex gap-1">
       <Select
-        className="w-40"
+        className={node.kind === "free" ? "w-44" : "w-80"}
         value={value}
         onChange={(v) => {
           const [kind, id] = v.split(":");
@@ -105,7 +121,7 @@ function NodeSelect({ p, r, node, onChange }: { p: Project; r: Route; node: Node
         }}
         options={options}
       />
-      {node.kind === "free" && <TextInput className="w-28" value={node.label} placeholder="ex. TA, DD hol" onChange={(v) => onChange({ ...node, label: v })} />}
+      {node.kind === "free" && <TextInput className="w-32" value={node.label} placeholder="ex. TA, DD hol" onChange={(v) => onChange({ ...node, label: v })} />}
     </div>
   );
 }
@@ -115,11 +131,22 @@ function RouteCard({ p, r, up }: { p: Project; r: Route; up: Up }) {
   const set = (recipe: (x: Route) => void, h?: string) => up((x) => { const y = x.routes.find((z) => z.id === r.id); if (y) recipe(y); }, h);
   const setSeg = (id: string, recipe: (s: RouteSegment) => void) => set((x) => { const s = x.segments.find((k) => k.id === id); if (s) recipe(s); });
   const len = routeLength(r);
+  const setNode = (segId: string, end: "from" | "to", n: NodeRef) =>
+    up((x) => {
+      const rr = x.routes.find((z) => z.id === r.id);
+      const sg = rr?.segments.find((k) => k.id === segId);
+      if (!rr || !sg) return;
+      sg[end] = n;
+      ensureRouteRoomForNode(x, rr, n);
+    });
   const circuitsInRoute = new Set(r.conduits.flatMap((c) => c.circuitIds));
   const [roomToAdd, setRoomToAdd] = useState<string>("");
   const sortedCircuits = useMemo(() => [...p.circuits].sort((a, b) => a.order - b.order), [p.circuits]);
+  const boxIdsOnRoute = r.segments.flatMap((s) => [s.from, s.to]).filter((n) => n.kind === "box" && n.refId).map((n) => n.refId!);
+  const circuitsOfBoxes = new Set(p.devices.filter((d) => d.boxId && boxIdsOnRoute.includes(d.boxId) && d.circuitId).map((d) => d.circuitId!));
 
   return (
+    <div id={r.code} className="scroll-mt-14">
     <Card
       title={
         <span className="flex flex-wrap items-center gap-2">
@@ -164,8 +191,11 @@ function RouteCard({ p, r, up }: { p: Project; r: Route; up: Up }) {
             <tbody>
               {r.segments.map((s) => (
                 <tr key={s.id}>
-                  <td><NodeSelect p={p} r={r} node={s.from} onChange={(n) => setSeg(s.id, (x) => void (x.from = n))} /></td>
-                  <td><NodeSelect p={p} r={r} node={s.to} onChange={(n) => setSeg(s.id, (x) => void (x.to = n))} /></td>
+                  <td><NodeSelect p={p} r={r} node={s.from} onChange={(n) => setNode(s.id, "from", n)} /></td>
+                  <td>
+                    <NodeSelect p={p} r={r} node={s.to} onChange={(n) => setNode(s.id, "to", n)} />
+                    {s.to.kind === "box" && s.to.refId && <MissingCircuits p={p} r={r} boxId={s.to.refId} up={up} />}
+                  </td>
                   <td className="w-32"><TrackedNumber value={s.lengthM} suffix="m" allowedProvenance={["estimat", "masurat"]} onChange={(v) => setSeg(s.id, (x) => void (x.lengthM = v))} /></td>
                   <td className="w-32"><Select value={s.wallTypeId} placeholder="—" onChange={(v) => setSeg(s.id, (x) => void (x.wallTypeId = v || null))} options={lib.wallTypes.map((w) => ({ value: w.id, label: w.name }))} /></td>
                   <td className="text-right"><ConfirmButton onConfirm={() => set((x) => void (x.segments = x.segments.filter((k) => k.id !== s.id)))}>✕</ConfirmButton></td>
@@ -187,7 +217,7 @@ function RouteCard({ p, r, up }: { p: Project; r: Route; up: Up }) {
         </div>
 
         <div>
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Tuburi / copex si circuitele din ele</p>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Tuburi / copex si circuitele din ele <span className="font-normal normal-case text-ink-3">· ● = circuit al unei doze de pe traseu</span></p>
           {r.conduits.map((cd) => (
             <div key={cd.id} className="mb-2 rounded-md border border-line p-2">
               <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -211,7 +241,7 @@ function RouteCard({ p, r, up }: { p: Project; r: Route; up: Up }) {
                     <Checkbox
                       key={c.id}
                       checked={cd.circuitIds.includes(c.id)}
-                      label={`${c.code} ${c.name}`}
+                      label={`${c.code} ${c.name}${circuitsOfBoxes.has(c.id) ? "  ●" : ""}`}
                       onChange={(on) =>
                         set((x) => {
                           const k = x.conduits.find((z) => z.id === cd.id)!;
@@ -228,6 +258,22 @@ function RouteCard({ p, r, up }: { p: Project; r: Route; up: Up }) {
         </div>
       </div>
     </Card>
+    </div>
+  );
+}
+
+/** circuitele aparatelor din doza care nu trec prin tuburile traseului */
+function MissingCircuits({ p, r, boxId, up }: { p: Project; r: Route; boxId: string; up: Up }) {
+  const missing = missingCircuitsOnRoute(p, boxId, r);
+  if (missing.length === 0) return null;
+  return (
+    <button
+      className="mt-1 rounded bg-warn/10 px-1.5 py-0.5 text-[11px] text-warn hover:bg-warn/20"
+      onClick={() => up((x) => { const rr = x.routes.find((z) => z.id === r.id); if (rr) addBoxCircuitsToRoute(x, boxId, rr); }, `Circuite adaugate in tubul ${r.code}`)}
+      title="Circuitele aparatelor din aceasta doza nu sunt in niciun tub al traseului"
+    >
+      + {missing.map((id) => p.circuits.find((c) => c.id === id)?.code).join(", ")} in tub
+    </button>
   );
 }
 

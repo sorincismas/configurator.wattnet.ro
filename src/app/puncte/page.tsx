@@ -2,6 +2,8 @@
 import { useMemo, useState } from "react";
 import { RequireProject } from "@/components/shell/AppShell";
 import { CATEGORY_LABEL, circuitOptions, levelOptions, roomLabel } from "@/components/install/common";
+import { RouteLinks } from "@/components/install/RouteLinks";
+import { routesForBox } from "@/lib/engine/links";
 import { Badge, Button, Card, Code, ConfirmButton, Empty, NumberInput, PageHeader, Select, TextInput, TrackedNumber, cx } from "@/components/ui";
 import { newBox, newDevice, removeBox, removeDevices } from "@/lib/model/factory";
 import { moveDevice } from "@/lib/engine/circuits";
@@ -48,6 +50,7 @@ function PointsPage() {
     DA: p.boxes.filter((b) => b.kind === "DA" && rooms.some((r) => r.id === b.roomId)).length,
     DD: p.boxes.filter((b) => b.kind === "DD" && rooms.some((r) => r.id === b.roomId)).length,
     modules: p.boxes.filter((b) => b.kind === "DA" && rooms.some((r) => r.id === b.roomId)).reduce((s, b) => s + b.modules, 0),
+    noRoute: p.boxes.filter((b) => rooms.some((r) => r.id === b.roomId) && routesForBox(p, b.id).length === 0).length,
   };
 
   return (
@@ -71,6 +74,7 @@ function PointsPage() {
           <span>DD <b>{totals.DD}</b></span>
           <span>module DA <b>{totals.modules}</b></span>
           <span>aparate <b>{visibleDevices.length}</b></span>
+          <span className={totals.noRoute ? "text-warn" : ""}>doze fara traseu <b>{totals.noRoute}</b></span>
         </span>
       </div>
 
@@ -177,7 +181,7 @@ function RoomCard({ p, r, up, cat, selected, toggle }: { p: Project; r: Room; up
                 <th>Tip</th>
                 <th>Eticheta / pozitie</th>
                 <th className="num">Putere</th>
-                <th>Circuit</th>
+                <th>Circuit / Trasee (doze)</th>
                 <th>Iluminat / doza</th>
                 <th />
               </tr>
@@ -226,7 +230,13 @@ function BoxRows({ p, b, inside, up, selected, toggle }: { p: Project; b: Box; i
             <span className="text-ink-3">derivatie</span>
           )}
         </td>
-        <td colSpan={2} className="text-xs text-ink-3">{b.kind === "DD" ? `${p.devices.filter((d) => d.junctionBoxId === b.id).length} puncte ramificate` : over ? <Badge tone="bad">module depasite</Badge> : null}</td>
+        <td colSpan={2} className="text-xs text-ink-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <RouteLinks p={p} b={b} up={up} />
+            {b.kind === "DD" && <span>{p.devices.filter((d) => d.junctionBoxId === b.id).length} puncte ramificate</span>}
+            {over && <Badge tone="bad">module depasite</Badge>}
+          </div>
+        </td>
         <td className="text-right">
           <ConfirmButton label={count ? `Sterge doza + ${count} aparate` : "Sterge doza"} onConfirm={() => up((x) => removeBox(x, b.id), `Doza stearsa ${b.code}`)}>Sterge</ConfirmButton>
         </td>
