@@ -251,9 +251,9 @@ export function TrackedNumber({
 
 export function Card({ title, actions, children, className, subtitle }: { title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cx("rounded-lg border border-line bg-white", className)}>
+    <section className={cx("rounded-lg border border-line bg-white shadow-[0_1px_2px_rgba(20,24,31,0.06)]", className)} style={{ borderTop: "3px solid var(--accent, #14181f)" }}>
       {(title || actions) && (
-        <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+        <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5" style={{ background: "color-mix(in srgb, var(--accent-bg, #eceae4) 45%, white)" }}>
           <div>
             {title && <h2 className="text-sm font-semibold text-ink">{title}</h2>}
             {subtitle && <p className="text-xs text-ink-3">{subtitle}</p>}
@@ -268,9 +268,9 @@ export function Card({ title, actions, children, className, subtitle }: { title?
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3 rounded-lg px-4 py-3" style={{ background: "var(--accent-bg, #eceae4)", borderLeft: "6px solid var(--accent, #14181f)" }}>
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>
+        <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--accent, #14181f)" }}>{title}</h1>
         {subtitle && <p className="mt-0.5 text-sm text-ink-2">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -319,8 +319,9 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: 
           onClick={() => onChange(t.id)}
           className={cx(
             "-mb-px border-b-2 px-3 py-2 text-sm",
-            value === t.id ? "border-ink font-semibold text-ink" : "border-transparent text-ink-2 hover:text-ink",
+            value === t.id ? "font-semibold" : "border-transparent text-ink-2 hover:text-ink",
           )}
+          style={value === t.id ? { borderColor: "var(--accent, #14181f)", color: "var(--accent, #14181f)" } : undefined}
         >
           {t.label}
           {t.count !== undefined && <span className="ml-1.5 text-xs text-ink-3">{t.count}</span>}

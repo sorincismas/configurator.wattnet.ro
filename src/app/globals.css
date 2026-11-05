@@ -2,11 +2,11 @@
 
 @theme {
   --color-ink: #14181f;
-  --color-ink-2: #4a5260;
-  --color-ink-3: #8a919c;
-  --color-paper: #f6f5f1;
-  --color-paper-2: #eceae4;
-  --color-line: #dcd9d1;
+  --color-ink-2: #3c4350;
+  --color-ink-3: #6f7682;
+  --color-paper: #f1efe9;
+  --color-paper-2: #e4e1d9;
+  --color-line: #cdc8bc;
   --color-volt: #f2c200;
   --color-ok: #1f7a4d;
   --color-warn: #b86a00;
@@ -27,11 +27,11 @@ body {
 
 /* tabele dense */
 table.dense th {
-  background: var(--color-paper);
+  background: var(--color-paper-2);
   border-bottom: 1px solid var(--color-line);
-  color: var(--color-ink-2);
+  color: var(--color-ink);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.03em;
   padding: 6px 8px;
   text-align: left;
@@ -39,7 +39,7 @@ table.dense th {
   white-space: nowrap;
 }
 table.dense td {
-  border-bottom: 1px solid var(--color-paper-2);
+  border-bottom: 1px solid var(--color-line);
   padding: 4px 8px;
   vertical-align: middle;
 }

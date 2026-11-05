@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { useActiveProject, useApp } from "@/lib/store/store";
 import { CURRENT_STAGE, NAV } from "./nav";
+import { accentFor } from "./theme";
 import { Logo } from "./Logo";
 import { SummaryBar, SummaryDetails } from "./SummaryBar";
 import { cx, useIsClient } from "../ui";
@@ -19,6 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const groups = [...new Set(NAV.map((n) => n.group))];
   const norm = (p: string) => (p.length > 1 ? p.replace(/\/$/, "") : p);
   const path = norm(pathname ?? "/");
+  const accent = accentFor(path);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -48,6 +50,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   const active = path === n.href;
                   const disabled = n.needsProject && !project;
                   const future = n.stage > CURRENT_STAGE;
+                  const a = accentFor(n.href);
                   return (
                     <Link
                       key={n.href}
@@ -55,11 +58,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                       aria-disabled={disabled}
                       className={cx(
                         "flex items-center justify-between rounded-md px-2 py-1.5 text-sm",
-                        active ? "bg-ink text-white" : "text-ink hover:bg-paper",
+                        active ? "font-semibold text-white shadow-sm" : "text-ink hover:bg-paper",
                         disabled && "pointer-events-none opacity-40",
                       )}
+                      style={active ? { background: a.c } : undefined}
                     >
-                      <span>{n.label}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: active ? "#fff" : a.c }} />
+                        {n.label}
+                      </span>
                       {future && <span className={cx("rounded px-1 text-[10px]", active ? "bg-white/20" : "bg-paper-2 text-ink-3")}>E{n.stage}</span>}
                     </Link>
                   );
@@ -69,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
           <div className="border-t border-line px-4 py-2 text-[10px] text-ink-3">Date stocate local in browser. Exporta periodic in JSON.</div>
         </aside>
-        <main className="min-w-0 flex-1 px-4 py-6 md:px-8">
+        <main className="min-w-0 flex-1 px-4 py-6 md:px-8" style={{ ["--accent" as string]: accent.c, ["--accent-bg" as string]: accent.bg }}>
           {!mounted || !hydrated ? <p className="text-sm text-ink-3">Se incarca datele locale…</p> : children}
         </main>
       </div>
