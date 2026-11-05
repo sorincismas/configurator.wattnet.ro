@@ -113,9 +113,13 @@ export default function LibraryPage() {
           <b>{exampleCount}</b> pozitii au valori <Badge tone="warn">exemplu</Badge>. Actualizeaza tarifele, timpii si preturile reale; marcajul dispare cand debifezi „exemplu”. Apoi exporta biblioteca si foloseste fisierul ca baza pentru proiecte noi.
         </div>
       )}
-      {editingProject && (
+      {editingProject ? (
         <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm">
-          Editezi doar copia din proiectul <b>{project.info.code}</b>. Biblioteca globala si celelalte proiecte nu se modifica.
+          Editezi copia din proiectul <b>{project.info.code}</b>: operatii si tarife, preturi materiale, factori, reguli. Catalogul tehnic (doze, aparate, cabluri, aparate de tablou) se editeaza in biblioteca globala si apare automat in toate proiectele.
+        </div>
+      ) : (
+        <div className="rounded-md border border-line bg-white px-4 py-2 text-xs text-ink-2">
+          <b>Catalogul tehnic</b> (tipuri de doze, aparate, cabluri, tuburi, aparate de tablou, cutii, tipuri de circuit) si <b>datele firmei</b> apar imediat in toate proiectele. <b>Tarifele, preturile materialelor existente si regulile</b> raman pe fiecare proiect pana la „Aplica biblioteca globala in proiect” (Date proiect), ca un deviz deja facut sa nu se schimbe singur.
         </div>
       )}
 
