@@ -116,7 +116,8 @@ export function NumberInput({
     <div className={cx("relative", withWidth(className))}>
       <input
         inputMode="decimal"
-        className={cx(inputCls, "w-full min-w-14", align === "right" && "text-right tabular-nums", suffix && "pr-8")}
+        className={cx(inputCls, "w-full min-w-14", align === "right" && "text-right tabular-nums")}
+        style={suffix ? { paddingRight: 12 + suffix.length * 6.5 } : undefined}
         value={focus ? text : shown}
         placeholder={placeholder ?? "—"}
         step={step}

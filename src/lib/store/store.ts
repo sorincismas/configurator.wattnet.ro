@@ -135,10 +135,17 @@ export const useApp = create<AppState>()(
       setLibrary: (lib) => setState({ library: migrateLibrary(lib), libraryUpdatedAt: nowISO() }),
 
       updateLibrary: (recipe) => {
-        const next = structuredClone(getState().library);
+        const s = getState();
+        const next = structuredClone(s.library);
         recipe(next);
         next.meta.updatedAt = nowISO();
-        setState({ library: next, libraryUpdatedAt: next.meta.updatedAt });
+        // datele firmei (identitate, serii de numerotare) sunt comune tuturor proiectelor;
+        // tarifele, materialele si regulile raman pe proiect pana la aplicarea explicita
+        const firmChanged = JSON.stringify(next.firm) !== JSON.stringify(s.library.firm);
+        const projects = firmChanged
+          ? Object.fromEntries(Object.entries(s.projects).map(([id, p]) => [id, { ...p, library: { ...p.library, firm: structuredClone(next.firm) } }]))
+          : s.projects;
+        setState({ library: next, libraryUpdatedAt: next.meta.updatedAt, projects });
       },
 
       markLibraryExported: () => setState({ libraryLastExportedAt: nowISO() }),
