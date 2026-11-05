@@ -4,6 +4,16 @@ import { RequireProject } from "@/components/shell/AppShell";
 import { CATEGORY_LABEL, circuitOptions, levelOptions, roomLabel } from "@/components/install/common";
 import { RouteLinks } from "@/components/install/RouteLinks";
 import { defaultBoxTypeId, defaultDeviceTypeId } from "@/lib/library/defaults";
+import { BOX_COLOR, DEVICE_COLOR, type Accent } from "@/components/shell/theme";
+
+/** eticheta colorata pe tip (doza / categorie aparat) */
+function Chip({ color, children }: { color: Accent; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded px-1.5 py-0.5 font-mono text-[11.5px] font-bold" style={{ color: color.c, background: color.bg, border: `1px solid ${color.c}40` }}>
+      {children}
+    </span>
+  );
+}
 import { routesForBox } from "@/lib/engine/links";
 import { Badge, Button, Card, Code, ConfirmButton, Empty, NumberInput, PageHeader, Select, TextInput, TrackedNumber, cx } from "@/components/ui";
 import { newBox, newDevice, removeBox, removeDevices } from "@/lib/model/factory";
@@ -62,6 +72,12 @@ function PointsPage() {
           <span>aparate <b>{visibleDevices.length}</b></span>
           <span className={totals.noRoute ? "text-warn" : ""}>doze fara traseu <b>{totals.noRoute}</b></span>
         </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-semibold text-ink-2">Legenda:</span>
+        {Object.values(BOX_COLOR).map((c) => <Chip key={c.label} color={c}>{c.label}</Chip>)}
+        {Object.values(DEVICE_COLOR).map((c) => <Chip key={c.label} color={c}>{c.label}</Chip>)}
       </div>
 
       {selected.size > 0 && <BulkBar p={p} up={up} ids={[...selected]} clear={() => setSelected(new Set())} />}
@@ -166,7 +182,15 @@ function RoomCard({ p, r, up, cat, selected, toggle }: { p: Project; r: Room; up
       title={
         <span className="flex items-center gap-2">
           <Code>{r.code}</Code> {roomLabel(p, r.id)}
-          <span className="font-normal text-ink-3">· {da.length} DA · {dd.length} DD · {devices.length} aparate · {fmtKW(power)}</span>
+          <span className="flex flex-wrap items-center gap-1.5 font-normal">
+            <Chip color={BOX_COLOR.DA}>{da.length} DA</Chip>
+            <Chip color={BOX_COLOR.DD}>{dd.length} DD</Chip>
+            {Object.entries(DEVICE_COLOR).map(([k, c]) => {
+              const n = devices.filter((d) => d.category === k).length;
+              return n ? <Chip key={k} color={c}>{n} {c.label.toLowerCase()}</Chip> : null;
+            })}
+            <span className="text-xs text-ink-2">{fmtKW(power)}</span>
+          </span>
         </span>
       }
     >
@@ -252,9 +276,9 @@ function BoxRows({ p, b, inside, up, selected, toggle }: { p: Project; b: Box; i
   const count = p.devices.filter((d) => d.boxId === b.id).length;
   return (
     <>
-      <tr className="bg-paper/60">
+      <tr style={{ background: BOX_COLOR[b.kind].bg, boxShadow: `inset 5px 0 0 ${BOX_COLOR[b.kind].c}` }}>
         <td />
-        <td><Code>{b.code}</Code></td>
+        <td><Chip color={BOX_COLOR[b.kind]}>{b.code}</Chip></td>
         <td className="min-w-56">
           <Select
             value={b.boxTypeId}
@@ -295,9 +319,9 @@ function DeviceRow({ p, d, up, selected, toggle, nested }: { p: Project; d: Devi
   const dds = p.boxes.filter((b) => b.kind === "DD" && (b.roomId === d.roomId || p.rooms.find((r) => r.id === b.roomId)?.levelId === p.rooms.find((r) => r.id === d.roomId)?.levelId));
   const roomBoxes = p.boxes.filter((b) => b.kind === "DA" && b.roomId === d.roomId);
   return (
-    <tr className={cx(selected && "bg-volt/10")}>
+    <tr className={cx(selected && "bg-volt/15")} style={{ boxShadow: `inset ${nested ? 12 : 5}px 0 0 ${(DEVICE_COLOR[d.category] ?? DEVICE_COLOR.altul).c}` }}>
       <td><input type="checkbox" className="accent-ink" checked={selected} onChange={(e) => toggle(d.id, e.target.checked)} /></td>
-      <td className={cx(nested && "pl-6")}><Code>{d.code}</Code></td>
+      <td className={cx(nested ? "pl-6" : "pl-3")}><Chip color={DEVICE_COLOR[d.category] ?? DEVICE_COLOR.altul}>{d.code}</Chip></td>
       <td className="min-w-56">
         <Select
           value={d.deviceTypeId}
