@@ -740,6 +740,8 @@ export interface DeviceType {
   shortcut?: string;
   /** operatia de manopera pentru punctele fara doza de acest tip (ex. punct de iluminat) */
   operationId?: ID | null;
+  /** faza la gata: operatia de montaj a aparatului / corpului de iluminat */
+  installOperationId?: ID | null;
 }
 
 /**
@@ -753,6 +755,8 @@ export interface PointPurpose {
   shortcut: string;
   boxTypeId: ID | null;
   powerW: number | null;
+  /** faza la gata: aparatajul pus implicit in doza (ex. doua prize intr-o doza de 4 module) */
+  deviceTypeIds?: ID[];
 }
 
 export interface BoxType {
@@ -865,6 +869,7 @@ export type QuantityDriver =
   | "end_points" // capete de circuit de legat: doze aparat + puncte fara doza
   | "box_type_op" // doze al caror tip are aceasta operatie de montaj
   | "device_type_op" // puncte fara doza (ex. iluminat) al caror tip are aceasta operatie
+  | "device_install_op" // faza la gata: aparate / corpuri al caror tip are aceasta operatie de montaj
   | "rooms";
 
 export interface Operation {

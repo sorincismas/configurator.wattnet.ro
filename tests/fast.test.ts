@@ -262,3 +262,54 @@ describe("destinatie doza si biblioteca unica", () => {
     expect(absorbMissing(a, createDefaultLibrary())).toBe(a);
   });
 });
+
+describe("faza la gata", () => {
+  const laborOf = (p: Project, id: string) => computeLabor(p).lines.find((l) => l.operation.id === id)?.quantity;
+  it("dozele fara aparataj nu intra la gata; aparatajul implicit se pune dupa destinatie", async () => {
+    const { fillDefaultDevices } = await import("@/lib/engine/points");
+    const p = setup();
+    const r = room(p, "Living").id;
+    applyQuickItems(p, r, parseQuickCode(p.library, "3P 1D 2I 2L 1S").items);
+    p.info.phases = ["rosu", "gata"];
+    expect(laborOf(p, "op-g-priza")).toBeUndefined();
+    expect(laborOf(p, "op-g-corp")).toBe(2);
+    expect(laborOf(p, "op-g-spot")).toBe(1);
+    expect(fillDefaultDevices(p)).toEqual({ filled: 6, skipped: 0 });
+    expect(laborOf(p, "op-g-priza")).toBe(5); // 3 simple + 2 in doza de 4 module
+    expect(laborOf(p, "op-g-intr")).toBe(2);
+    expect(fillDefaultDevices(p).filled).toBe(0);
+  });
+  it("devizul se separa pe faze: la rosu fara montaj aparataj, la gata fara doze si cabluri", async () => {
+    const { fillDefaultDevices } = await import("@/lib/engine/points");
+    const { computeMaterials } = await import("@/lib/engine/pricing");
+    const p = setup();
+    applyQuickItems(p, room(p, "Living").id, parseQuickCode(p.library, "3P 1I 1L").items);
+    generateCircuits(p);
+    fillDefaultDevices(p);
+    p.info.phases = ["rosu"];
+    const rosu = computeLabor(p);
+    expect(rosu.lines.every((l) => l.operation.phase === "rosu")).toBe(true);
+    expect(computeMaterials(p).lines.some((m) => m.materialId === "mat-ap-priza")).toBe(false);
+    p.info.phases = ["gata"];
+    const gata = computeLabor(p);
+    expect(gata.lines.length).toBeGreaterThan(0);
+    expect(gata.lines.every((l) => l.operation.phase === "gata")).toBe(true);
+    const mats = computeMaterials(p).lines;
+    expect(mats.find((m) => m.materialId === "mat-ap-priza")?.quantity).toBe(3);
+    expect(mats.some((m) => m.materialId === "mat-da-rot")).toBe(false);
+    p.info.phases = ["rosu", "gata"];
+    expect(computeLabor(p).subtotal).toBeCloseTo(rosu.subtotal + gata.subtotal, 2);
+  });
+  it("biblioteca veche primeste operatiile la gata si aparatajul implicit", () => {
+    const p = setup();
+    p.library.meta.defaultsRev = 6;
+    p.library.operations = p.library.operations.filter((o) => o.phase !== "gata");
+    for (const t of p.library.deviceTypes) delete t.installOperationId;
+    for (const x of p.library.pointPurposes) delete x.deviceTypeIds;
+    const m = migrateProject(p).library;
+    expect(m.operations.some((o) => o.id === "op-g-priza")).toBe(true);
+    expect(m.deviceTypes.find((t) => t.id === "dt-il-spot")!.installOperationId).toBe("op-g-spot");
+    expect(m.pointPurposes.find((x) => x.id === "pp-priza-mod4")!.deviceTypeIds).toEqual(["dt-priza", "dt-priza"]);
+    expect(m.planStages.some((s) => s.id === "ps-aparataj")).toBe(true);
+  });
+});

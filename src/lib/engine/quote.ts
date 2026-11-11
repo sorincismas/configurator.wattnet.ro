@@ -18,6 +18,7 @@ export const CATEGORY_TITLE: Record<string, string> = {
   tuburi: "Tuburi de protectie (copex)",
   cablare: "Cablare",
   tablou: "Tablou electric",
+  aparataj: "Aparataj si corpuri de iluminat (la gata)",
   verificari: "Verificari si masuratori",
   diverse: "Diverse",
 };
@@ -27,6 +28,7 @@ const MATERIAL_TITLE: Record<string, string> = {
   cabluri: "Cabluri si conductoare",
   tuburi: "Tuburi de protectie",
   doze: "Doze",
+  aparataj: "Aparataj si corpuri de iluminat",
   tablouri: "Cutii tablou",
   protectii: "Aparataj modular de protectie",
   accesorii: "Accesorii tablou",
@@ -204,6 +206,8 @@ function materialRows(p: Project, mat: MaterialsResult, detail: DocDetail): DocR
   return [...cat.values()].map((r, i) => ({ ...r, code: String(i + 1) }));
 }
 
+export const phaseLabel = (p: Project) => (p.info.phases.includes("rosu") && p.info.phases.includes("gata") ? "faza la rosu + faza la gata" : p.info.phases.includes("gata") ? "faza la gata" : "faza la rosu");
+
 export function buildDocument(p: Project, kind: DocKind, detail: DocDetail): QuoteDocument {
   const labor = computeLabor(p);
   const mat = computeMaterials(p);
@@ -231,7 +235,7 @@ export function buildDocument(p: Project, kind: DocKind, detail: DocDetail): Quo
     number,
     date,
     untilDate,
-    scopeLabel: scope.label,
+    scopeLabel: `${scope.label} · ${phaseLabel(p)}`,
     laborRows: detail === "detaliat" ? detailedLaborRows(labor.lines) : simplifiedLaborRows(labor.lines),
     materialRows: p.quote.includeMaterials ? materialRows(p, mat, detail) : [],
     extras: labor.extras.map((e, i) => ({ code: `S${i + 1}`, name: e.label, unit: "", quantity: null, unitPrice: null, value: e.amount })),

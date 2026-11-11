@@ -36,9 +36,9 @@ export default function Page() {
   return (
     <StagePlaceholder
       title="Plan de executie"
-      stage={6}
+      stage={7}
       items={[
-        "Etape: pregatire, trasee, doze si tuburi, cablare, tablouri, verificari",
+        "Etape la rosu (pregatire, trasee, doze, cablare, tablouri, verificari) si la gata (aparataj, corpuri de iluminat, predare)",
         "Operatii cu subactiuni, legate de cantitati si incaperi",
         "Dependente intre operatii (ex. tragere cablu dupa copex)",
         "Durata calendaristica dupa echipa, program si operatii paralele",

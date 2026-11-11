@@ -1,6 +1,6 @@
 "use client";
 import { RequireProject } from "@/components/shell/AppShell";
-import { Badge, Button, Card, Checkbox, Field, PageHeader, Select, TextArea, TextInput } from "@/components/ui";
+import { Button, Card, Checkbox, Field, PageHeader, Select, TextArea, TextInput } from "@/components/ui";
 import { downloadJSON, projectFileName, projectToFile } from "@/lib/io/files";
 import { fmtDate } from "@/lib/format";
 import { useActiveProject, useApp, useUpdateActive } from "@/lib/store/store";
@@ -60,7 +60,6 @@ function ProjectInfoPage() {
             <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-2">Faze</span>
             <Checkbox checked={i.phases.includes("rosu")} onChange={(v) => togglePhase("rosu", v)} label="Faza la rosu" />
             <Checkbox checked={i.phases.includes("gata")} onChange={(v) => togglePhase("gata", v)} label="Faza la gata" />
-            {i.phases.includes("gata") && <Badge tone="info">operatiile la gata se adauga intr-o etapa ulterioara</Badge>}
           </div>
           <Checkbox checked={i.partial} onChange={(v) => setInfo("partial", v)} label="Proiect partial" />
         </div>

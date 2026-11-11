@@ -60,4 +60,5 @@ Pe Vercel: framework Next.js, comanda `npm run build`, director de iesire `out` 
 | 5 Dosar si versiuni | dosar PDF 14 capitole (complet sau pe capitole), emitere Rev.NN cu instantaneu inghetat, comparatie cu proiectul curent, registru observatii | **gata** |
 | 6 Lucru rapid + telefon | ecran Puncte si circuite (coloane nivel > incapere > puncte > detaliu), cod rapid „4P 2L 1I”, impartire automata pe circuite (max 6 puncte, incaperea impreuna), NYY-J implicit, lungimi / sant / tub estimate pe proiect, tablou nou / existent, interfata pentru telefon | **gata** |
 | 6b Faza la rosu pe doze | doze cu destinatie (Biblioteca → Doze pentru faza la rosu), puncte de iluminat pe tipuri, traseu ca lant pe circuit (tablou → doza → doza, metri pe legatura), deviz pe tipuri de doze, aparataj pus in doze dupa module (faza la gata) | **gata** |
+| 6c Faza la gata | operatii de montaj aparataj si corpuri de iluminat, aparataj implicit pe destinatia dozei, materiale aparataj, deviz pe faza (la rosu / la gata / ambele) | **gata** |
 | 7 Plan executie | operatii, dependente, echipa, durata | motor initial |
