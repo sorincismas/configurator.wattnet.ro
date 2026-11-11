@@ -6,7 +6,7 @@ import { useSummary } from "@/components/shell/SummaryBar";
 import { levelOptions } from "@/components/install/common";
 import { QuoteDoc } from "@/components/quote/QuoteDoc";
 import { Badge, Button, Card, Checkbox, ConfirmButton, Field, NumberInput, PageHeader, Select, Table, Tabs, TextArea, TextInput, cx } from "@/components/ui";
-import { resolveScope, SCOPE_PRESET_CATEGORIES, type LaborLine } from "@/lib/engine/pricing";
+import { computeLabor, resolveScope, SCOPE_PRESET_CATEGORIES, type LaborLine } from "@/lib/engine/pricing";
 import { assignProformaNumber, buildDocument, categoryTitle, defaultProforma, subtotals, topDrivers, type DocDetail, type DocKind, type GroupBy } from "@/lib/engine/quote";
 import { fmtHours, fmtMoney, fmtNum, NA } from "@/lib/format";
 import { printElement } from "@/lib/io/svg";
@@ -64,6 +64,41 @@ function Calculation({ p }: { p: Project }) {
   );
 }
 
+/** devizul se face pe faza: la rosu, la gata sau ambele */
+function PhasePicker({ p, up }: { p: Project; up: Up }) {
+  const ph = p.info.phases;
+  const cur = ph.includes("rosu") && ph.includes("gata") ? "ambele" : ph.includes("gata") ? "gata" : "rosu";
+  const labor = useMemo(() => {
+    const all = computeLabor({ ...p, info: { ...p.info, phases: ["rosu", "gata"] } });
+    const sum = (f: "rosu" | "gata") => all.lines.filter((l) => l.enabled && l.operation.phase === f).reduce((s, l) => s + l.value, 0);
+    return { rosu: sum("rosu"), gata: sum("gata") };
+  }, [p]);
+  const cur$ = p.library.firm.currency;
+  const empty = p.boxes.filter((b) => b.kind === "DA" && !p.devices.some((d) => d.boxId === b.id && !d.placeholder)).length;
+  const opts = [
+    { id: "rosu", label: "Faza la rosu", sub: `doze, trasee, cabluri, tablou · ${fmtMoney(labor.rosu, cur$)}`, v: ["rosu"] },
+    { id: "gata", label: "Faza la gata", sub: `aparataj, corpuri de iluminat · ${fmtMoney(labor.gata, cur$)}`, v: ["gata"] },
+    { id: "ambele", label: "Ambele faze", sub: fmtMoney(labor.rosu + labor.gata, cur$), v: ["rosu", "gata"] },
+  ] as const;
+  return (
+    <div className="mb-4">
+      <div className="grid gap-2 sm:grid-cols-3">
+        {opts.map((o) => (
+          <button key={o.id} onClick={() => up((x) => void (x.info.phases = [...o.v]), `Deviz pentru: ${o.label}`)} className={cx("rounded-md border px-3 py-2 text-left", cur === o.id ? "border-ink bg-ink text-white" : "border-line bg-white hover:bg-paper")}>
+            <span className="block text-sm font-semibold">{o.label}</span>
+            <span className={cx("block text-[11.5px]", cur === o.id ? "text-white/80" : "text-ink-2")}>{o.sub}</span>
+          </button>
+        ))}
+      </div>
+      {cur !== "rosu" && empty > 0 && (
+        <p className="mt-2 text-xs text-amber-800">
+          {empty} doze nu au inca aparataj, deci nu intra in faza la gata. Pune aparatajul in <Link className="underline" href="/instalatie">Puncte si circuite → Aparataj (la gata)</Link>.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ScopeCard({ p, up }: { p: Project; up: Up }) {
   const sc = p.quote.scope ?? EMPTY_SCOPE;
   const set = (patch: Partial<QuoteScope>) => up((x) => void (x.quote.scope = { ...(x.quote.scope ?? EMPTY_SCOPE), ...patch }), "Domeniul devizului modificat");
@@ -73,7 +108,8 @@ function ScopeCard({ p, up }: { p: Project; up: Up }) {
   const manualOps = p.library.operations.filter((o) => o.active && o.driver === "manual" && (!resolved.categories || resolved.categories.has(o.category)));
 
   return (
-    <Card title="Ce intra in deviz" subtitle="Toata lucrarea sau doar o parte: un tablou, anumite niveluri, anumite categorii de lucrari.">
+    <Card title="Ce intra in deviz" subtitle="Faza lucrarii, apoi toata lucrarea sau doar o parte: un tablou, anumite niveluri, anumite categorii de lucrari.">
+      <PhasePicker p={p} up={up} />
       <div className="flex flex-wrap gap-2">
         {(
           [

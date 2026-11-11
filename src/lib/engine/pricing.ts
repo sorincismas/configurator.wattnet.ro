@@ -154,6 +154,11 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
       const types = new Set(p.library.deviceTypes.filter((t) => t.operationId === operationId).map((t) => t.id));
       return groupByRoom(p.devices.filter((d) => !d.boxId && d.deviceTypeId && types.has(d.deviceTypeId)).map((d) => ({ roomId: d.roomId, id: d.id })));
     }
+    case "device_install_op": {
+      // faza la gata: aparatele puse efectiv (nu rezervarile dozelor fara aparataj)
+      const types = new Set(p.library.deviceTypes.filter((t) => t.installOperationId === operationId).map((t) => t.id));
+      return groupByRoom(p.devices.filter((d) => !d.placeholder && d.deviceTypeId && types.has(d.deviceTypeId)).map((d) => ({ roomId: d.roomId, id: d.id })));
+    }
     case "boxes_dd":
     case "dd_connections":
       return groupByRoom(p.boxes.filter((b) => b.kind === "DD").map((b) => ({ roomId: b.roomId, id: b.id })));
@@ -424,7 +429,9 @@ export function computeMaterials(p: Project): MaterialsResult {
   };
 
   const scope = resolveScope(p);
-  const cat = (k: string) => !scope.categories || scope.categories.has(k);
+  const rosu = p.info.phases.includes("rosu");
+  const gata = p.info.phases.includes("gata");
+  const cat = (k: string) => (k === "aparataj" ? gata : rosu) && (!scope.categories || scope.categories.has(k));
   const ok = (id: string, roomId: string | null) => inScope(p, scope, id, roomId);
 
   if (cat("doze")) for (const b of p.boxes) if (ok(b.id, b.roomId)) add(lib.boxTypes.find((t) => t.id === b.boxTypeId)?.materialId, 1, b.code);
@@ -451,6 +458,14 @@ export function computeMaterials(p: Project): MaterialsResult {
   if (cat("tuburi"))
     for (const r of p.routes)
       for (const cd of r.conduits) if (ok(cd.id, r.roomIds[0] ?? null)) add(lib.conduitTypes.find((t) => t.id === cd.conduitTypeId)?.materialId, conduitLength(r, cd).value ?? 0, cd.code);
+
+  // faza la gata: aparatajul si corpurile care au material in biblioteca
+  if (cat("aparataj"))
+    for (const d of p.devices) {
+      if (d.placeholder || !d.deviceTypeId || !ok(d.id, d.roomId)) continue;
+      const m = lib.deviceTypes.find((t) => t.id === d.deviceTypeId)?.materialId;
+      if (m) add(m, 1, d.code);
+    }
 
   for (const t of p.panels) {
     if (!cat("tablou") || (scope.panels && !scope.panels.has(t.id))) continue;

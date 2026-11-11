@@ -35,7 +35,7 @@ import type {
 
 export const DEFAULT_LIBRARY_VERSION = "2026.11-exemplu";
 /** creste cand aplicatia adauga elemente noi in biblioteca implicita */
-export const DEFAULTS_REV = 6;
+export const DEFAULTS_REV = 7;
 
 export const firm: FirmSettings = {
   name: "WATTNET",
@@ -133,6 +133,11 @@ const materials: Material[] = [
   M("mat-nyyj5x4", "", "Cablu NYY-J 5x4", "cabluri", "", "m", 15.0),
   M("mat-nyyj5x6", "", "Cablu NYY-J 5x6", "cabluri", "", "m", 23.0),
   M("mat-nyyj5x10", "", "Cablu NYY-J 5x10", "cabluri", "", "m", 37.0),
+  M("mat-ap-priza", "", "Priza simpla Schuko cu rama", "aparataj", "Schneider", "buc", 22),
+  M("mat-ap-priza-dubla", "", "Priza dubla Schuko cu rama", "aparataj", "Schneider", "buc", 38),
+  M("mat-ap-intr", "", "Intrerupator simplu cu rama", "aparataj", "Schneider", "buc", 18),
+  M("mat-ap-intr-dublu", "", "Intrerupator dublu cu rama", "aparataj", "Schneider", "buc", 24),
+  M("mat-ap-cap", "", "Comutator cap-scara cu rama", "aparataj", "Schneider", "buc", 22),
   M("mat-utp6", "", "Cablu UTP Cat6", "curenti_slabi", "", "m", 2.2),
   // tuburi
   M("mat-copex16", "", "Tub copex 16 mm", "tuburi", "", "m", 0.9),
@@ -198,16 +203,31 @@ const boxTypes: BoxType[] = [
   { id: "bt-dd-rot", name: "Doza derivatie rotunda D80", kind: "DD", shape: "rotunda", modules: 0, brand: "Gewiss", materialId: "mat-dd-rot", operationId: "op-doza-dd" },
 ];
 
+/** materialul implicit al aparatajului uzual (preturi exemplu); corpurile de iluminat le aduce de regula beneficiarul */
+export const DEVICE_MATERIAL: Record<string, string> = { "dt-priza": "mat-ap-priza", "dt-priza-tv": "mat-ap-priza", "dt-priza-dubla": "mat-ap-priza-dubla", "dt-intr-simplu": "mat-ap-intr", "dt-intr-dublu": "mat-ap-intr-dublu", "dt-intr-cap": "mat-ap-cap" };
+
+/** operatia de montaj la gata, implicita dupa tip / categorie */
+export function defaultInstallOp(id: string, category: string): string | null {
+  const byId: Record<string, string> = { "dt-il-plafon": "op-g-corp", "dt-il-aplica": "op-g-aplica", "dt-il-ext": "op-g-aplica", "dt-il-spot": "op-g-spot", "dt-il-led": "op-g-led" };
+  if (byId[id]) return byId[id];
+  const byCat: Record<string, string> = { priza: "op-g-priza", curenti_slabi: "op-g-priza", intrerupator: "op-g-intr", comanda: "op-g-comanda", iluminat: "op-g-corp", consumator_dedicat: "op-g-dedicat" };
+  return byCat[category] ?? null;
+}
+
 /* ------------------- destinatii doze (faza la rosu) ----------------- */
 /* consumurile sunt valori medii EXEMPLU, de actualizat in Biblioteca */
 const pointPurposes: PointPurpose[] = [
-  { id: "pp-priza", name: "Doza priza", category: "priza", shortcut: "P", boxTypeId: "bt-da-rot", powerW: 300 },
-  { id: "pp-priza-mod4", name: "Doza prize modulara 4M (2 prize)", category: "priza", shortcut: "D", boxTypeId: "bt-da-mod4", powerW: 600 },
-  { id: "pp-priza-tv", name: "Doza priza TV", category: "priza", shortcut: "T", boxTypeId: "bt-da-rot", powerW: 200 },
-  { id: "pp-intr", name: "Doza intrerupator / comutator", category: "intrerupator", shortcut: "I", boxTypeId: "bt-da-rot", powerW: null },
-  { id: "pp-comanda", name: "Doza termostat / senzor", category: "comanda", shortcut: "C", boxTypeId: "bt-da-rot", powerW: 5 },
+  { id: "pp-priza", name: "Doza priza", category: "priza", shortcut: "P", boxTypeId: "bt-da-rot", powerW: 300, deviceTypeIds: ["dt-priza"] },
+  { id: "pp-priza-mod4", name: "Doza prize modulara 4M (2 prize)", category: "priza", shortcut: "D", boxTypeId: "bt-da-mod4", powerW: 600, deviceTypeIds: ["dt-priza", "dt-priza"] },
+  { id: "pp-priza-tv", name: "Doza priza TV", category: "priza", shortcut: "T", boxTypeId: "bt-da-rot", powerW: 200, deviceTypeIds: ["dt-priza-tv"] },
+  { id: "pp-intr", name: "Doza intrerupator / comutator", category: "intrerupator", shortcut: "I", boxTypeId: "bt-da-rot", powerW: null, deviceTypeIds: ["dt-intr-simplu"] },
+  { id: "pp-comanda", name: "Doza termostat / senzor", category: "comanda", shortcut: "C", boxTypeId: "bt-da-rot", powerW: 5, deviceTypeIds: ["dt-termostat"] },
   { id: "pp-dedicat", name: "Doza consumator dedicat", category: "consumator_dedicat", shortcut: "E", boxTypeId: "bt-da-rot", powerW: null },
-  { id: "pp-slabi", name: "Doza curenti slabi (date, TV coaxial)", category: "curenti_slabi", shortcut: "R", boxTypeId: "bt-da-rot", powerW: null },
+  { id: "pp-slabi", name: "Doza curenti slabi (date, TV coaxial)", category: "curenti_slabi", shortcut: "R", boxTypeId: "bt-da-rot", powerW: null, deviceTypeIds: ["dt-rj45"] },
+  { id: "pp-plita", name: "Doza plita electrica", category: "consumator_dedicat", shortcut: "", boxTypeId: "bt-da-rot", powerW: 7000, deviceTypeIds: ["dt-plita"] },
+  { id: "pp-cuptor", name: "Doza cuptor electric", category: "consumator_dedicat", shortcut: "", boxTypeId: "bt-da-rot", powerW: 3500, deviceTypeIds: ["dt-cuptor"] },
+  { id: "pp-masina-spalat", name: "Doza masina de spalat", category: "consumator_dedicat", shortcut: "", boxTypeId: "bt-da-rot", powerW: 2200, deviceTypeIds: ["dt-masina-spalat"] },
+  { id: "pp-ac", name: "Doza aer conditionat", category: "consumator_dedicat", shortcut: "", boxTypeId: "bt-da-rot", powerW: 1500, deviceTypeIds: ["dt-ac"] },
 ];
 
 /* ------------------------ aparate / consumatori -------------------- */
@@ -220,7 +240,7 @@ const D = (
   suggestedPowerW: number | null = null,
   threePhase = false,
   shortcut?: string,
-): DeviceType => ({ id, name, category, modules, needsBox, suggestedPowerW, threePhase, brand: "", materialId: null, ...(shortcut ? { shortcut } : {}), ...(category === "iluminat" && !needsBox ? { operationId: "op-punct-il" } : {}) });
+): DeviceType => ({ id, name, category, modules, needsBox, suggestedPowerW, threePhase, brand: "", materialId: DEVICE_MATERIAL[id] ?? null, ...(shortcut ? { shortcut } : {}), ...(category === "iluminat" && !needsBox ? { operationId: "op-punct-il" } : {}), installOperationId: defaultInstallOp(id, category) });
 
 /*
  * Puterile sunt CONSUMURI MEDII EXEMPLU pentru estimare (faza la rosu);
@@ -401,7 +421,9 @@ const planStages: PlanStage[] = [
   { id: "ps-doze", name: "Montaj doze si tuburi", order: 3 },
   { id: "ps-cablare", name: "Cablare", order: 4 },
   { id: "ps-tablouri", name: "Tablouri", order: 5 },
-  { id: "ps-verificari", name: "Verificari si predare", order: 6 },
+  { id: "ps-verificari", name: "Verificari la rosu", order: 6 },
+  { id: "ps-aparataj", name: "Montaj aparataj si corpuri de iluminat (la gata)", order: 7 },
+  { id: "ps-final", name: "Verificari finale si predare", order: 8 },
 ];
 
 /* ---------------------------- operatii ----------------------------- */
@@ -441,6 +463,16 @@ const operations: Operation[] = [
   O({ id: "op-demontare-tablou", code: "OP017", name: "Demontare tablou existent", category: "tablou", unit: "tablou", rate: 150, timeMin: 60, driver: "manual", planStageId: "ps-tablouri", parallelizable: false, subactions: ["Scoatere de sub tensiune si verificare lipsa tensiune", "Identificare si marcare circuite existente", "Demontare aparataj si cutie"] }),
   O({ id: "op-reconectare-existent", code: "OP018", name: "Identificare si reconectare circuit existent", category: "tablou", unit: "circuit", rate: 20, timeMin: 15, driver: "existing_circuits", planStageId: "ps-tablouri", dependsOn: ["op-aparat-modular"], parallelizable: false, subactions: ["Identificare circuit", "Verificare stare conductoare", "Conectare in tabloul nou"] }),
   O({ id: "op-legare-capete", code: "OP019", name: "Pregatire si legare capete cablu in doza / punct", category: "cablare", unit: "buc", rate: 6, timeMin: 5, driver: "end_points", planStageId: "ps-cablare", dependsOn: ["op-cablu"], subactions: ["Dezizolare si fasonare capete", "Legare / izolare provizorie", "Marcare circuit"] }),
+  /* ------------------------- faza la gata ------------------------- */
+  O({ id: "op-g-priza", code: "OP030", name: "Montare priza in doza", category: "aparataj", phase: "gata", unit: "buc", rate: 12, timeMin: 8, driver: "device_install_op", planStageId: "ps-aparataj", subactions: ["Conectare conductoare", "Fixare aparat si rama", "Proba"] }),
+  O({ id: "op-g-intr", code: "OP031", name: "Montare intrerupator / comutator", category: "aparataj", phase: "gata", unit: "buc", rate: 12, timeMin: 8, driver: "device_install_op", planStageId: "ps-aparataj" }),
+  O({ id: "op-g-comanda", code: "OP032", name: "Montare termostat / senzor / buton", category: "aparataj", phase: "gata", unit: "buc", rate: 20, timeMin: 15, driver: "device_install_op", planStageId: "ps-aparataj" }),
+  O({ id: "op-g-corp", code: "OP033", name: "Montare corp de iluminat plafon (lustra / plafoniera)", category: "aparataj", phase: "gata", unit: "buc", rate: 35, timeMin: 25, driver: "device_install_op", planStageId: "ps-aparataj", subactions: ["Fixare suport", "Conectare", "Proba"] }),
+  O({ id: "op-g-aplica", code: "OP034", name: "Montare aplica", category: "aparataj", phase: "gata", unit: "buc", rate: 25, timeMin: 20, driver: "device_install_op", planStageId: "ps-aparataj" }),
+  O({ id: "op-g-spot", code: "OP035", name: "Montare spot incastrat", category: "aparataj", phase: "gata", unit: "buc", rate: 12, timeMin: 8, driver: "device_install_op", planStageId: "ps-aparataj" }),
+  O({ id: "op-g-led", code: "OP036", name: "Montare banda LED cu alimentator", category: "aparataj", phase: "gata", unit: "buc", rate: 40, timeMin: 30, driver: "device_install_op", planStageId: "ps-aparataj" }),
+  O({ id: "op-g-dedicat", code: "OP037", name: "Racordare consumator dedicat", category: "aparataj", phase: "gata", unit: "buc", rate: 40, timeMin: 30, driver: "device_install_op", planStageId: "ps-aparataj" }),
+  O({ id: "op-g-verificari", code: "OP039", name: "Verificari finale, probe si predare", category: "verificari", phase: "gata", unit: "circuit", rate: 15, timeMin: 10, driver: "circuits", planStageId: "ps-final", dependsOn: ["op-g-priza"] }),
   O({ id: "op-deplasare", code: "OP016", name: "Deplasare / organizare santier", category: "diverse", unit: "proiect", rate: 0, timeMin: 0, driver: "manual", planStageId: "ps-pregatire", active: true }),
 ];
 

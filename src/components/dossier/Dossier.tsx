@@ -104,7 +104,7 @@ export const Dossier = forwardRef<HTMLDivElement, { p: Project; chapters: number
               <p className="text-[12px] uppercase tracking-[0.3em] text-[#4a5260]">Dosar tehnic si comercial</p>
               <h1 className="mt-3 text-[28px] font-bold leading-tight">{p.info.name}</h1>
               <p className="mt-2 text-[13px]">{p.info.location || "—"}</p>
-              <p className="mt-6 text-[12px]">Instalatii electrice · {p.info.phases.map((x) => (x === "rosu" ? "faza la rosu" : "faza la gata")).join(" + ")}</p>
+              <p className="mt-6 text-[12px]">Instalatii electrice · {p.info.phases.includes("rosu") && p.info.phases.includes("gata") ? "faza la rosu + faza la gata" : p.info.phases.includes("gata") ? "faza la gata" : "faza la rosu"}</p>
             </div>
             <div className="mt-auto grid grid-cols-2 gap-4 text-[11px]">
               <table className={T}>
@@ -182,7 +182,7 @@ export const Dossier = forwardRef<HTMLDivElement, { p: Project; chapters: number
                     <td className={TD}>{p.library.wallTypes.find((w) => w.id === r.wallTypeId)?.name ?? "—"}</td>
                     <td className={TDN}>{p.boxes.filter((b) => b.roomId === r.id && b.kind === "DA").length}</td>
                     <td className={TDN}>{p.boxes.filter((b) => b.roomId === r.id && b.kind === "DD").length}</td>
-                    <td className={TDN}>{p.devices.filter((d) => d.roomId === r.id).length}</td>
+                    <td className={TDN}>{p.devices.filter((d) => d.roomId === r.id && !d.placeholder).length}</td>
                   </tr>
                 ))}
                 <tr className="font-bold">
@@ -191,7 +191,7 @@ export const Dossier = forwardRef<HTMLDivElement, { p: Project; chapters: number
                   <td className={TD} colSpan={2} />
                   <td className={TDN}>{s.counts.boxesDA}</td>
                   <td className={TDN}>{s.counts.boxesDD}</td>
-                  <td className={TDN}>{p.devices.length}</td>
+                  <td className={TDN}>{p.devices.filter((d) => !d.placeholder).length}</td>
                 </tr>
               </tbody>
             </table>

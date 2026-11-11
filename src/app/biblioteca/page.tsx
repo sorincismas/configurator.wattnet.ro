@@ -33,11 +33,12 @@ const DRIVERS: { value: Operation["driver"]; label: string }[] = [
   { value: "end_points", label: "Capete de legat (doze aparat + puncte fara doza)" },
   { value: "box_type_op", label: "Doze al caror tip are aceasta operatie" },
   { value: "device_type_op", label: "Puncte fara doza (iluminat) al caror tip are aceasta operatie" },
+  { value: "device_install_op", label: "La gata: aparate / corpuri al caror tip are aceasta operatie" },
   { value: "dd_connections", label: "Conexiuni in doze derivatie" },
   { value: "rooms", label: "Incaperi" },
 ];
 const UNITS = ["buc", "m", "ora", "set", "circuit", "tablou", "proiect"].map((u) => ({ value: u, label: u }));
-const CATEGORIES = ["trasare", "sant", "doze", "tuburi", "cablare", "tablou", "verificari", "diverse"].map((u) => ({ value: u, label: u }));
+const CATEGORIES = ["trasare", "sant", "doze", "tuburi", "cablare", "tablou", "aparataj", "verificari", "diverse"].map((u) => ({ value: u, label: u }));
 
 export default function LibraryPage() {
   const app = useApp();
@@ -336,6 +337,26 @@ export default function LibraryPage() {
               { key: "shortcut", label: "Litera", type: "custom", width: "60px", render: (r) => letterInput(r.shortcut, (v) => setLetter("purpose", r.id, v)) },
               { key: "boxTypeId", label: "Doza implicita", type: "select", options: daOpts, nullable: true, width: "240px" },
               { key: "powerW", label: "Consum mediu", type: "number", suffix: "W", width: "120px", nullable: true },
+              {
+                key: "deviceTypeIds",
+                label: "Aparataj implicit (la gata)",
+                type: "custom",
+                width: "300px",
+                render: (r) => {
+                  const ids = r.deviceTypeIds ?? [];
+                  const setIds = (next: string[]) => updateLib((l) => void (l.pointPurposes.find((x) => x.id === r.id)!.deviceTypeIds = next));
+                  return (
+                    <div className="flex flex-wrap items-center gap-1">
+                      {ids.map((id, k) => (
+                        <button key={k} className="rounded border border-line bg-paper px-1.5 py-0.5 text-[11px] hover:line-through" title="Scoate" onClick={() => setIds(ids.filter((_, j) => j !== k))}>
+                          {lib.deviceTypes.find((t) => t.id === id)?.name ?? "?"}
+                        </button>
+                      ))}
+                      <Select className="w-28 text-[12px]" value="" placeholder="+ aparat" onChange={(v) => v && setIds([...ids, v])} options={lib.deviceTypes.filter((t) => t.category !== "iluminat").map((t) => ({ value: t.id, label: `${t.name} (${t.modules} mod.)` }))} />
+                    </div>
+                  );
+                },
+              },
             ]}
           />
           <p className="mt-2 text-xs text-ink-3">Tipurile de doza (marime, module, pret, tarif de montaj) se definesc in fila Doze. Intr-o doza de 4 module incap, de exemplu, doua prize de cate 2 module.</p>
@@ -352,7 +373,9 @@ export default function LibraryPage() {
               { key: "needsBox", label: "In doza", type: "checkbox", width: "65px" },
               { key: "suggestedPowerW", label: "Consum mediu", type: "number", suffix: "W", width: "120px", nullable: true },
               { key: "shortcut", label: "Litera", type: "custom", width: "60px", render: (r) => letterInput(r.shortcut ?? "", (v) => setLetter("device", r.id, v)) },
-              { key: "operationId", label: "Operatie (punct fara doza)", type: "select", options: opOpts, nullable: true, width: "220px" },
+              { key: "operationId", label: "La rosu: operatie punct fara doza", type: "select", options: opOpts.filter((o) => lib.operations.find((x) => x.id === o.value)?.phase === "rosu"), nullable: true, width: "220px" },
+              { key: "installOperationId", label: "La gata: operatie montaj", type: "select", options: opOpts.filter((o) => lib.operations.find((x) => x.id === o.value)?.phase === "gata"), nullable: true, width: "220px" },
+              { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "200px" },
               { key: "threePhase", label: "Trifazat", type: "checkbox", width: "65px" },
               { key: "brand", label: "Producator", type: "text", width: "110px" },
               {

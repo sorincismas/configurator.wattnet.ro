@@ -208,6 +208,28 @@ export function addDeviceToBox(p: Project, boxId: string, deviceTypeId: string):
   return { ok: true };
 }
 
+/**
+ * faza la gata: pune aparatajul implicit al destinatiei in dozele fara aparataj.
+ * Dozele fara destinatie sau fara aparataj implicit raman neatinse (se completeaza manual).
+ */
+export function fillDefaultDevices(p: Project, boxIds?: string[]): { filled: number; skipped: number } {
+  let filled = 0;
+  let skipped = 0;
+  for (const b of p.boxes) {
+    if (b.kind !== "DA" || (boxIds && !boxIds.includes(b.id)) || realBoxDevices(p, b.id).length) continue;
+    const ids = (p.library.pointPurposes.find((x) => x.id === b.purposeId)?.deviceTypeIds ?? []).filter((id) => p.library.deviceTypes.some((t) => t.id === id));
+    if (!ids.length) {
+      skipped++;
+      continue;
+    }
+    let any = false;
+    for (const id of ids) any = addDeviceToBox(p, b.id, id).ok || any;
+    if (any) filled++;
+    else skipped++;
+  }
+  return { filled, skipped };
+}
+
 /** scoate un aparat din doza; doza goala revine la rezervare (destinatie + circuit) */
 export function removeDeviceFromBox(p: Project, deviceId: string) {
   const d = p.devices.find((x) => x.id === deviceId);

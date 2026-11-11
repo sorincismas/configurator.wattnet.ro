@@ -4,7 +4,7 @@
  * structura si se aplica migrarile necesare.
  */
 import { z } from "zod";
-import { createDefaultLibrary, DEFAULTS_REV } from "../library/default-library";
+import { createDefaultLibrary, defaultInstallOp, DEFAULTS_REV, DEVICE_MATERIAL } from "../library/default-library";
 import { uid } from "../model/ids";
 import { defaultFastSettings, nowISO, projectCode } from "../model/factory";
 import { SCHEMA_VERSION, type Library, type LibraryFile, type Project, type ProjectFile } from "../model/types";
@@ -58,11 +58,24 @@ export function migrateLibrary(input: Partial<Library>): Library {
   // (daca utilizatorul sterge ulterior un element, acesta nu mai revine)
   const rev = input.meta?.defaultsRev ?? 1;
   if (rev < DEFAULTS_REV) {
-    const keys = ["rules", "operations", "protectionDevices", "materials", "cableTypes", "conduitTypes", "boxTypes", "deviceTypes", "pointPurposes", "circuitTypes", "enclosureTypes", "difficultyFactors"] as const;
+    const keys = ["planStages", "rules", "operations", "protectionDevices", "materials", "cableTypes", "conduitTypes", "boxTypes", "deviceTypes", "pointPurposes", "circuitTypes", "enclosureTypes", "difficultyFactors"] as const;
     for (const k of keys) {
       const cur = (Array.isArray(out[k]) ? out[k] : []) as { id: string }[];
       for (const item of def[k] as { id: string }[]) if (!cur.some((x) => x.id === item.id)) cur.push(structuredClone(item));
       (out as unknown as Record<string, unknown>)[k] = cur;
+    }
+    if (rev < 7) {
+      // faza la gata: operatie de montaj pe tip de aparat, aparataj implicit pe destinatia dozei
+      for (const t of out.deviceTypes) {
+        if (t.installOperationId === undefined) t.installOperationId = defaultInstallOp(t.id, t.category);
+        if (!t.materialId && DEVICE_MATERIAL[t.id]) t.materialId = DEVICE_MATERIAL[t.id];
+      }
+      for (const x of out.pointPurposes) {
+        const d = def.pointPurposes.find((y) => y.id === x.id);
+        if (d && x.deviceTypeIds === undefined) x.deviceTypeIds = structuredClone(d.deviceTypeIds ?? []);
+      }
+      const st = out.planStages.find((x) => x.id === "ps-verificari");
+      if (st && st.name === "Verificari si predare") st.name = "Verificari la rosu";
     }
     if (rev < 6) {
       // faza la rosu pe doze: operatie de montaj pe tip de doza, punct de iluminat, litere pe destinatii

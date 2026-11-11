@@ -16,6 +16,7 @@ import { applySizing, proposeSizing } from "@/lib/engine/sizing";
 import {
   addBoxes,
   addDeviceToBox,
+  fillDefaultDevices,
   addPoints,
   applyQuickItems,
   boxCapacity,
@@ -93,7 +94,7 @@ function FnCounts({ stats }: { stats: { byFunction: Partial<Record<PointFunction
 
 function InstallPage() {
   const p = useActiveProject()!;
-  const [tab, setTab] = useState<"puncte" | "circuite" | "estimare">("puncte");
+  const [tab, setTab] = useState<"puncte" | "circuite" | "aparataj" | "estimare">("puncte");
   const stats = useMemo(() => {
     const all = p.rooms.map((r) => roomItemStats(p, r.id));
     const byFunction: Partial<Record<PointFunction, number>> = {};
@@ -118,6 +119,7 @@ function InstallPage() {
         tabs={[
           { id: "puncte", label: "Doze si puncte", count: stats.total },
           { id: "circuite", label: "Circuite", count: p.circuits.length },
+          { id: "aparataj", label: "Aparataj (la gata)", count: p.devices.filter((d) => !d.placeholder && (d.boxId || d.category !== "iluminat")).length },
           { id: "estimare", label: "Estimare si optiuni" },
         ]}
         value={tab}
@@ -125,6 +127,7 @@ function InstallPage() {
       />
       {tab === "puncte" && <PointsBrowser p={p} />}
       {tab === "circuite" && <CircuitsTab p={p} />}
+      {tab === "aparataj" && <FinishTab p={p} />}
       {tab === "estimare" && <EstimateTab p={p} />}
     </div>
   );
@@ -864,6 +867,105 @@ function CircuitCard({ p, up, l }: { p: Project; up: Up; l: CircuitLoad }) {
         )}
         {l.warnings.length > 0 && <p className="text-[11.5px] text-amber-700">{l.warnings.join("; ")}</p>}
       </div>
+    </div>
+  );
+}
+
+/* ====================== APARATAJ - FAZA LA GATA ===================== */
+
+function FinishTab({ p }: { p: Project }) {
+  const up = useUpdateActive();
+  const lib = p.library;
+  const [msg, setMsg] = useState("");
+  const da = p.boxes.filter((b) => b.kind === "DA");
+  const rows = da.map((b) => {
+    const real = realBoxDevices(p, b.id);
+    const pp = lib.pointPurposes.find((x) => x.id === b.purposeId);
+    const defaults = (pp?.deviceTypeIds ?? []).map((id) => lib.deviceTypes.find((t) => t.id === id)?.name).filter(Boolean) as string[];
+    return { b, real, pp, defaults, cat: boxCategory(p, b.id), cap: boxCapacity(p, b.id) };
+  });
+  const empty = rows.filter((r) => r.real.length === 0);
+  const fillable = empty.filter((r) => r.defaults.length > 0);
+  const lights = p.devices.filter((d) => !d.boxId && d.category === "iluminat");
+  const gataOn = p.info.phases.includes("gata");
+  const roomName = (id: string) => p.rooms.find((r) => r.id === id)?.name ?? "";
+  const byRoom = p.rooms.map((r) => ({ r, rows: rows.filter((x) => x.b.roomId === r.id) })).filter((g) => g.rows.length);
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-line bg-white p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="primary"
+            disabled={!fillable.length}
+            onClick={() =>
+              up((x) => {
+                const r = fillDefaultDevices(x);
+                setMsg(`Aparataj pus in ${r.filled} doze${r.skipped ? `; ${r.skipped} doze fara aparataj implicit raman de completat manual` : ""}.`);
+              }, "Aparataj implicit pus in doze")
+            }
+          >
+            Pune aparatajul implicit in dozele goale{fillable.length ? ` (${fillable.length})` : ""}
+          </Button>
+          <span className="text-sm">
+            <b>{da.length - empty.length}</b> din <b>{da.length}</b> doze au aparataj · <b>{lights.length}</b> corpuri de iluminat
+          </span>
+        </div>
+        <p className="mt-2 text-xs text-ink-2">Aparatajul implicit al fiecarei destinatii se seteaza in Biblioteca → Aparate → Doze pentru faza la rosu. Pe o doza anume il schimbi din fila Doze si puncte (Detaliu). Corpurile de iluminat intra la faza la gata cu operatia de montaj a tipului lor.</p>
+        {msg && <p className="mt-1 text-sm text-ok">{msg}</p>}
+        {!gataOn && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Devizul este acum doar pentru faza la rosu; montajul aparatajului nu apare in el.
+            <Button size="sm" onClick={() => up((x) => void (x.info.phases = ["rosu", "gata"]), "Faza la gata inclusa in deviz")}>
+              Include si faza la gata
+            </Button>
+          </div>
+        )}
+      </div>
+      {byRoom.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-line bg-white p-8 text-center text-sm text-ink-3">Nicio doza. Adauga dozele in fila Doze si puncte.</p>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+          {byRoom.map(({ r, rows: rs }) => (
+            <div key={r.id} className="overflow-hidden rounded-lg border border-line bg-white">
+              <div className="flex items-center justify-between border-b border-line bg-paper/60 px-3 py-1.5 text-sm font-semibold">
+                <span>{roomName(r.id)}</span>
+                <span className="text-[11px] font-normal text-ink-2">
+                  {rs.filter((x) => x.real.length).length}/{rs.length} cu aparataj
+                </span>
+              </div>
+              <ul className="divide-y divide-line">
+                {rs.map(({ b, real, defaults, cat, cap }) => (
+                  <li key={b.id} className="flex items-center gap-2 px-2 py-1.5 text-[12.5px]">
+                    <FnBadge f={cat ? FUNCTION_OF[cat] : "A"} />
+                    <span className="w-12 shrink-0 font-mono text-[11.5px] text-ink-2">{b.code}</span>
+                    <span className="min-w-0 flex-1 leading-tight">
+                      {real.length ? (
+                        <span className="block truncate">{real.map((d) => d.label).join(" + ")}</span>
+                      ) : (
+                        <span className="block truncate text-ink-3">{defaults.length ? `de pus: ${defaults.join(" + ")}` : "fara aparataj implicit"}</span>
+                      )}
+                    </span>
+                    <span className="text-[11px] tabular-nums text-ink-3">
+                      {cap.used}/{cap.modules}
+                    </span>
+                    {real.length === 0 && defaults.length > 0 && (
+                      <button className="rounded border border-line px-1.5 py-0.5 text-[11px] hover:bg-paper" onClick={() => up((x) => void fillDefaultDevices(x, [b.id]), `Aparataj pus in ${b.code}`)}>
+                        Pune
+                      </button>
+                    )}
+                    {real.length > 0 && (
+                      <button className="rounded px-1.5 text-ink-3 hover:bg-paper hover:text-red-700" title="Scoate aparatajul" onClick={() => up((x) => real.forEach((d) => removeDeviceFromBox(x, d.id)), `Aparataj scos din ${b.code}`)}>
+                        ×
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
