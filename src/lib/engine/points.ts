@@ -158,11 +158,17 @@ export function moveBox(p: Project, boxId: string, circuitId: string | null) {
   }
 }
 
-/** schimba destinatia unei doze fara aparataj */
+/** schimba destinatia unei doze fara aparataj (o doza goala primeste rezervarea acum) */
 export function setBoxPurpose(p: Project, boxId: string, purposeId: string) {
   const pp = p.library.pointPurposes.find((x) => x.id === purposeId);
-  const ph = boxDevices(p, boxId).find((d) => d.placeholder);
-  if (!pp || !ph || realBoxDevices(p, boxId).length) return;
+  const box = p.boxes.find((b) => b.id === boxId);
+  if (!pp || !box || realBoxDevices(p, boxId).length) return;
+  let ph = boxDevices(p, boxId).find((d) => d.placeholder);
+  if (!ph) {
+    ph = makePlaceholder(p, box, pp.category, pp.powerW);
+    p.devices.push(ph);
+    return;
+  }
   if (ph.category !== pp.category) {
     ph.circuitId = null;
     ph.circuitLocked = false;

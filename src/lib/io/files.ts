@@ -102,6 +102,8 @@ export function migrateLibrary(input: Partial<Library>): Library {
       if (d && r.validation === "de_validat" && (r.reference.startsWith("de completat") || r.id === "r-sectiune-min")) Object.assign(r, { title: d.title, reference: d.reference, params: d.params, conditions: d.conditions });
     }
   }
+  // destinatiile de doza sunt necesare pentru faza la rosu: o lista goala se completeaza cu cele implicite
+  if (!Array.isArray(out.pointPurposes) || out.pointPurposes.length === 0) out.pointPurposes = structuredClone(def.pointPurposes);
   out.firm = { ...def.firm, ...(input.firm ?? {}) };
   out.meta = { ...def.meta, ...(input.meta ?? {}), defaultsRev: DEFAULTS_REV };
   for (const k of Object.keys(def) as (keyof Library)[]) {

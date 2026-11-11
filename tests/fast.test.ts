@@ -215,3 +215,24 @@ describe("lant pe circuit", () => {
     expect(circuitCableLength(p, c)).toMatchObject({ value: 6, certainty: "masurat" });
   });
 });
+
+describe("doze goale si biblioteci vechi", () => {
+  it("doza goala (fara aparataj, fara rezervare) primeste destinatie si poate intra pe circuit", async () => {
+    const { setBoxPurpose } = await import("@/lib/engine/points");
+    const { newBox } = await import("@/lib/model/factory");
+    const p = setup();
+    const b = newBox(p, "DA", room(p, "Living").id, "bt-da-mod3");
+    p.boxes.push(b);
+    expect(boxDevices(p, b.id)).toHaveLength(0);
+    setBoxPurpose(p, b.id, "pp-priza");
+    expect(boxDevices(p, b.id)[0]).toMatchObject({ placeholder: true, category: "priza" });
+    generateCircuits(p);
+    expect(boxDevices(p, b.id)[0].circuitId).not.toBeNull();
+    expect(addDeviceToBox(p, b.id, "dt-priza").ok).toBe(true);
+  });
+  it("o biblioteca fara destinatii de doza le primeste pe cele implicite", () => {
+    const p = setup();
+    p.library.pointPurposes = [];
+    expect(migrateProject(p).library.pointPurposes.length).toBeGreaterThan(0);
+  });
+});

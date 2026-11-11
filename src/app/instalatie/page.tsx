@@ -40,7 +40,8 @@ import { moveInChain, resolveChain, setLinkLength } from "@/lib/engine/chain";
 import { fmtNum, NA } from "@/lib/format";
 import { newBuilding, newLevel, newRoom, tracked } from "@/lib/model/factory";
 import type { Circuit, Device, DeviceCategory, Project } from "@/lib/model/types";
-import { useActiveProject, useUpdateActive } from "@/lib/store/store";
+import { useActiveProject, useApp, useUpdateActive } from "@/lib/store/store";
+import { createDefaultLibrary } from "@/lib/library/default-library";
 
 type Up = ReturnType<typeof useUpdateActive>;
 
@@ -375,7 +376,13 @@ function QuickButton({ letter, label, sub, color, onClick, title }: { letter: st
 function RoomItems({ p, up, roomId, selected, onSelect }: { p: Project; up: Up; roomId: string; selected: string | null; onSelect: (id: string) => void }) {
   const lib = p.library;
   const purposes = lib.pointPurposes;
-  const lights = lib.deviceTypes.filter((t) => t.category === "iluminat" && !t.needsBox);
+  const lights = lib.deviceTypes.filter((t) => t.category === "iluminat");
+  const updateLibrary = useApp((a) => a.updateLibrary);
+  const restorePurposes = () => {
+    const def = createDefaultLibrary().pointPurposes;
+    updateLibrary((l) => void (l.pointPurposes = structuredClone(def)));
+    up((x) => void (x.library.pointPurposes = structuredClone(def)), "Destinatii de doza implicite adaugate");
+  };
   const [code, setCode] = useState("");
   const [boxType, setBoxType] = useState("");
   const parsed = code.trim() ? parseQuickCode(lib, code) : null;
@@ -419,15 +426,24 @@ function RoomItems({ p, up, roomId, selected, onSelect }: { p: Project; up: Up; 
           <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-2">Doze</span>
           <Select className="w-auto min-w-0 max-w-[60%] text-[12px]" value={boxType} placeholder="tipul implicit al destinatiei" onChange={setBoxType} options={lib.boxTypes.filter((t) => t.kind === "DA").map((t) => ({ value: t.id, label: t.name }))} />
         </div>
+        {purposes.length === 0 && (
+          <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-[12px] text-amber-900">
+            Biblioteca nu are destinatii de doza (priza, intrerupator, termostat...).{" "}
+            <Button size="sm" onClick={restorePurposes}>
+              Adauga destinatiile implicite
+            </Button>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
           {purposes.map((x) => (
             <QuickButton key={x.id} letter={x.shortcut || "·"} label={x.name.replace(/^Doza /, "")} sub={btName(boxType || x.boxTypeId)} color={DEVICE_COLOR[x.category]} onClick={() => addBox(x.id)} title={`Adauga ${x.name} (litera ${x.shortcut})`} />
           ))}
         </div>
-        <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Puncte de iluminat (fara doza)</p>
+        <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Puncte de iluminat</p>
+        {lights.length === 0 && <p className="text-[12px] text-amber-800">Biblioteca nu are tipuri de iluminat (Biblioteca → Aparate, categoria iluminat).</p>}
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
           {lights.map((t) => (
-            <QuickButton key={t.id} letter={t.shortcut || "·"} label={t.name.replace(/ \(alimentator\)/, "")} sub={t.suggestedPowerW ? `${t.suggestedPowerW} W` : undefined} color={DEVICE_COLOR.iluminat} onClick={() => addLight(t.id)} title={`Adauga ${t.name}`} />
+            <QuickButton key={t.id} letter={t.shortcut || "·"} label={t.name.replace(/ \(alimentator\)/, "")} sub={[t.needsBox ? "cu doza" : "", t.suggestedPowerW ? `${t.suggestedPowerW} W` : ""].filter(Boolean).join(" · ") || undefined} color={DEVICE_COLOR.iluminat} onClick={() => addLight(t.id)} title={`Adauga ${t.name}`} />
           ))}
         </div>
         <form
@@ -505,7 +521,9 @@ function BoxDetail({ p, up, boxId, onDeleted }: { p: Project; up: Up; boxId: str
   const [aparat, setAparat] = useState("");
   const [err, setErr] = useState("");
   const purposeNow = lib.pointPurposes.find((x) => ph && x.category === ph.category);
-  const fits = lib.deviceTypes.filter((t) => t.needsBox && (box.modules === 0 || t.modules <= cap.free));
+  // aparatajul care se poate pune in doza: tot ce nu este punct de iluminat fara doza
+  const candidates = lib.deviceTypes.filter((t) => t.needsBox || t.category !== "iluminat");
+  const fitsType = (t: (typeof candidates)[number]) => box.modules === 0 || t.modules <= cap.free;
   const setDev = (id: string, fn: (x: Device) => void) => up((x) => { const t = x.devices.find((y) => y.id === id); if (t) fn(t); });
 
   return (
@@ -517,8 +535,8 @@ function BoxDetail({ p, up, boxId, onDeleted }: { p: Project; up: Up; boxId: str
           options={lib.boxTypes.filter((t) => t.kind === "DA").map((t) => ({ value: t.id, label: `${t.name} (${t.modules} mod.)` }))}
         />
       </Field>
-      {ph && (
-        <Field label="Destinatie" hint="se poate schimba cat timp doza nu are aparataj">
+      {real.length === 0 && (
+        <Field label="Destinatie" hint={ph ? "se poate schimba cat timp doza nu are aparataj" : "doza goala: alege ce va fi in ea"}>
           <Select value={purposeNow?.id ?? ""} placeholder={cat ? FUNCTION_LABEL[FUNCTION_OF[cat]] : "—"} onChange={(v) => up((x) => setBoxPurpose(x, boxId, v), `Destinatie ${box.code}`)} options={lib.pointPurposes.map((x) => ({ value: x.id, label: x.name }))} />
         </Field>
       )}
@@ -555,7 +573,13 @@ function BoxDetail({ p, up, boxId, onDeleted }: { p: Project; up: Up; boxId: str
           </ul>
         )}
         <div className="mt-2 flex gap-1.5">
-          <Select className="min-w-0 flex-1" value={aparat} placeholder={fits.length ? "Alege aparatul" : "doza este plina"} onChange={(v) => { setAparat(v); setErr(""); }} options={fits.map((t) => ({ value: t.id, label: `${t.name} (${t.modules} mod.)` }))} />
+          <Select
+            className="min-w-0 flex-1"
+            value={aparat}
+            placeholder={!candidates.length ? "nu exista aparate in Biblioteca" : cap.free <= 0 && box.modules > 0 ? "doza este plina" : "Alege aparatul"}
+            onChange={(v) => { setAparat(v); setErr(""); }}
+            options={[...candidates].sort((a, b) => Number(!fitsType(a)) - Number(!fitsType(b))).map((t) => ({ value: t.id, label: `${t.name} (${t.modules} mod.)${fitsType(t) ? "" : " - nu incape"}` }))}
+          />
           <Button
             disabled={!aparat}
             onClick={() => {
