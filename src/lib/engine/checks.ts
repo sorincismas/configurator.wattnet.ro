@@ -48,7 +48,7 @@ function mk(p: Project, ruleId: string, scope: CheckItem["scope"], targetId: str
     // fara regula in biblioteca nu se poate concluziona
     result: r ? result : "neverificat",
     ruleValidated: r?.validation === "validat",
-    message: r ? message : "Regula nu exista in biblioteca proiectului.",
+    message: r ? message : "Regula nu exista in biblioteca.",
   };
 }
 

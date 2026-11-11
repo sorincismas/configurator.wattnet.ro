@@ -201,6 +201,8 @@ export interface Box {
   kind: BoxKind;
   roomId: ID;
   boxTypeId: ID | null;
+  /** destinatia aleasa in faza la rosu (PointPurpose) */
+  purposeId?: ID | null;
   /** numar module pentru doze modulare (DA) */
   modules: number;
   /** pozitie descriptiva: perete N, langa usa ... */
@@ -648,7 +650,7 @@ export interface Project {
   measurements: Measurement[];
   register: RegisterEntry[];
 
-  /** biblioteca proprie a proiectului (copie). Actualizare din biblioteca globala doar prin actiune explicita. */
+  /** copia bibliotecii unice a aplicatiei (tinuta la zi automat; inghetata doar in versiunile emise) */
   library: Library;
   libraryAppliedAt: ISODate;
 

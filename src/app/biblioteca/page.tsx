@@ -9,7 +9,7 @@ import { downloadJSON, libraryFileName, libraryToFile } from "@/lib/io/files";
 import { fmtDate, fmtMoney, timeAgo } from "@/lib/format";
 import { uid } from "@/lib/model/ids";
 import type { BoxType, CableType, PointPurpose, CircuitType, ConduitType, DeviceType, DifficultyFactor, EnclosureType, Library, Material, Operation, ProtectionDevice, TechnicalRule, WallType } from "@/lib/model/types";
-import { useActiveProject, useApp } from "@/lib/store/store";
+import { useApp } from "@/lib/store/store";
 
 type TabId = "firma" | "operatii" | "materiale" | "protectii" | "tablouri" | "doze" | "cabluri" | "aparate" | "factori" | "circuite" | "reguli" | "tabele" | "sabloane";
 
@@ -41,15 +41,9 @@ const CATEGORIES = ["trasare", "sant", "doze", "tuburi", "cablare", "tablou", "v
 
 export default function LibraryPage() {
   const app = useApp();
-  const project = useActiveProject();
-  const [target, setTarget] = useState<"global" | "project">("global");
   const [tab, setTab] = useState<TabId>("operatii");
-  const editingProject = target === "project" && project;
-  const lib: Library = editingProject ? project.library : app.library;
-  const updateLib = (recipe: (l: Library) => void) => {
-    if (editingProject) app.update(project.id, (p) => { recipe(p.library); p.library.meta.updatedAt = new Date().toISOString(); });
-    else app.updateLibrary(recipe);
-  };
+  const lib: Library = app.library;
+  const updateLib = (recipe: (l: Library) => void) => app.updateLibrary(recipe);
   /** helper pentru liste */
   function listOps<K extends keyof Library>(key: K) {
     type Row = Library[K] extends (infer R)[] ? R : never;
@@ -81,7 +75,7 @@ export default function LibraryPage() {
   const matOpts = lib.materials.map((m) => ({ value: m.id, label: `${m.name}${m.brand ? " - " + m.brand : ""}` }));
   const exportLib = () => {
     downloadJSON(libraryToFile(lib), libraryFileName(lib));
-    if (!editingProject) app.markLibraryExported();
+    app.markLibraryExported();
   };
   const exampleCount = lib.operations.filter((o) => o.isExample).length + lib.materials.filter((m) => m.isExample).length;
 
@@ -108,17 +102,11 @@ export default function LibraryPage() {
         subtitle={
           <>
             {lib.meta.name} · versiunea <b>{lib.meta.version}</b> · modificata {fmtDate(lib.meta.updatedAt)}
-            {!editingProject && <> · export: {timeAgo(app.libraryLastExportedAt)}</>}
+            <> · export: {timeAgo(app.libraryLastExportedAt)}</>
           </>
         }
         actions={
           <>
-            <Select
-              className="w-64"
-              value={target}
-              onChange={(v) => setTarget(v)}
-              options={[{ value: "global", label: "Editez: biblioteca globala" }, ...(project ? [{ value: "project" as const, label: `Editez: biblioteca proiectului ${project.info.code}` }] : [])]}
-            />
             <Button variant="primary" onClick={exportLib}>Export biblioteca JSON</Button>
           </>
         }
@@ -129,15 +117,9 @@ export default function LibraryPage() {
           <b>{exampleCount}</b> pozitii au valori <Badge tone="warn">exemplu</Badge>. Actualizeaza tarifele, timpii si preturile reale; marcajul dispare cand debifezi „exemplu”. Apoi exporta biblioteca si foloseste fisierul ca baza pentru proiecte noi.
         </div>
       )}
-      {editingProject ? (
-        <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm">
-          Editezi copia din proiectul <b>{project.info.code}</b>: operatii si tarife, preturi materiale, factori, reguli. Catalogul tehnic (doze, aparate, cabluri, aparate de tablou) se editeaza in biblioteca globala si apare automat in toate proiectele.
-        </div>
-      ) : (
-        <div className="rounded-md border border-line bg-white px-4 py-2 text-xs text-ink-2">
-          <b>Catalogul tehnic</b> (tipuri de doze, aparate, cabluri, tuburi, aparate de tablou, cutii, tipuri de circuit) si <b>datele firmei</b> apar imediat in toate proiectele. <b>Tarifele, preturile materialelor existente si regulile</b> raman pe fiecare proiect pana la „Aplica biblioteca globala in proiect” (Date proiect), ca un deviz deja facut sa nu se schimbe singur.
-        </div>
-      )}
+      <div className="rounded-md border border-line bg-white px-4 py-2 text-xs text-ink-2">
+        <b>O singura biblioteca</b> pentru toate proiectele: orice modificare (tarife, preturi, doze, aparate, reguli, date firma) se vede imediat in toate proiectele. Exporta biblioteca si pastreaz-o ca sablon; la import inlocuieste biblioteca curenta. Ofertele si dosarele deja emise raman cu valorile din momentul emiterii.
+      </div>
 
       <Tabs tabs={tabs} value={tab} onChange={setTab} />
 
@@ -505,7 +487,7 @@ export default function LibraryPage() {
           <ImportPanel />
         </Card>
         <Card title="Resetare">
-          <p className="mb-2 text-sm text-ink-2">Inlocuieste biblioteca {editingProject ? "proiectului" : "globala"} cu valorile exemplu initiale. Exporta inainte daca vrei sa pastrezi modificarile.</p>
+          <p className="mb-2 text-sm text-ink-2">Inlocuieste biblioteca cu valorile exemplu initiale (pentru toate proiectele). Exporta inainte daca vrei sa pastrezi modificarile.</p>
           <ConfirmButton size="md" label="Reseteaza la valorile exemplu" onConfirm={() => updateLib((l) => Object.assign(l, createDefaultLibrary()))}>
             Reseteaza biblioteca…
           </ConfirmButton>

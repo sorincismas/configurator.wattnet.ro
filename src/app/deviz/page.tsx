@@ -344,7 +344,7 @@ function MaterialsCard({ p }: { p: Project }) {
   const cur = p.library.firm.currency;
   const m = s.materials;
   return (
-    <Card title={`Materiale (${m.lines.length})`} subtitle="Cantitati din model; preturile si adaosul se modifica in biblioteca proiectului.">
+    <Card title={`Materiale (${m.lines.length})`} subtitle="Cantitati din model; preturile si adaosul se modifica in Biblioteca.">
       {m.lines.length === 0 ? (
         <p className="text-sm text-ink-3">Nicio pozitie de material in domeniul ales.</p>
       ) : (

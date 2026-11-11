@@ -59,8 +59,8 @@ export function ImportPanel() {
                 Biblioteca <b>{pending.library.meta.name}</b> - versiunea {pending.library.meta.version} ({pending.library.operations.length} operatii, {pending.library.materials.length} materiale)
               </p>
               <div className="mt-2 flex gap-2">
-                <Button variant="primary" size="sm" onClick={() => { setLibrary(pending.library); setPending(null); setMsg("Biblioteca globala a fost inlocuita. Proiectele existente nu se modifica pana nu aplici biblioteca explicit."); }}>
-                  Inlocuieste biblioteca globala
+                <Button variant="primary" size="sm" onClick={() => { setLibrary(pending.library); setPending(null); setMsg("Biblioteca a fost inlocuita si se foloseste in toate proiectele."); }}>
+                  Inlocuieste biblioteca
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setPending(null)}>Renunta</Button>
               </div>

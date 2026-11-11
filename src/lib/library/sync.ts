@@ -40,3 +40,21 @@ export function syncCatalogs(projectLib: Library, globalLib: Library): Library {
 export function catalogDiffers(projectLib: Library, globalLib: Library): boolean {
   return CATALOG_KEYS.some((k) => JSON.stringify(projectLib[k]) !== JSON.stringify(globalLib[k]));
 }
+
+/**
+ * Biblioteca unica: adauga in biblioteca elementele (dupa id) care exista doar in `other`
+ * (ex. un proiect importat sau copia veche a unui proiect), fara sa modifice nimic existent.
+ */
+export function absorbMissing(lib: Library, other: Library): Library {
+  let out: Library | null = null;
+  for (const k of Object.keys(lib) as (keyof Library)[]) {
+    const a = lib[k];
+    const b = other?.[k];
+    if (!Array.isArray(a) || !Array.isArray(b)) continue;
+    const missing = (b as WithId[]).filter((x) => x && x.id && !(a as WithId[]).some((y) => y.id === x.id));
+    if (!missing.length) continue;
+    out ??= structuredClone(lib);
+    (out[k] as unknown as WithId[]).push(...structuredClone(missing));
+  }
+  return out ?? lib;
+}

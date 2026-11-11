@@ -236,3 +236,29 @@ describe("doze goale si biblioteci vechi", () => {
     expect(migrateProject(p).library.pointPurposes.length).toBeGreaterThan(0);
   });
 });
+
+describe("destinatie doza si biblioteca unica", () => {
+  it("schimbarea destinatiei pastreaza destinatia aleasa si ia tipul ei de doza", async () => {
+    const { setBoxPurpose } = await import("@/lib/engine/points");
+    const p = setup();
+    const [b] = addBoxes(p, room(p, "Living").id, "pp-priza", 1);
+    expect(b.purposeId).toBe("pp-priza");
+    setBoxPurpose(p, b.id, "pp-priza-mod4");
+    expect(b).toMatchObject({ purposeId: "pp-priza-mod4", boxTypeId: "bt-da-mod4", modules: 4 });
+    expect(boxDevices(p, b.id)[0].powerW.value).toBe(600);
+    setBoxPurpose(p, b.id, "pp-priza-tv");
+    expect(b.purposeId).toBe("pp-priza-tv");
+    expect(boxDevices(p, b.id)[0].powerW.value).toBe(200);
+  });
+  it("absorbMissing adauga doar elementele lipsa, fara sa schimbe tarifele existente", async () => {
+    const { absorbMissing } = await import("@/lib/library/sync");
+    const a = createDefaultLibrary();
+    const b = createDefaultLibrary();
+    b.operations[0].rate = 999;
+    b.boxTypes.push({ ...b.boxTypes[0], id: "bt-custom", name: "Doza proiect" });
+    const out = absorbMissing(a, b);
+    expect(out.operations[0].rate).toBe(a.operations[0].rate);
+    expect(out.boxTypes.some((t) => t.id === "bt-custom")).toBe(true);
+    expect(absorbMissing(a, createDefaultLibrary())).toBe(a);
+  });
+});
