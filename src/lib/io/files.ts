@@ -58,11 +58,27 @@ export function migrateLibrary(input: Partial<Library>): Library {
   // (daca utilizatorul sterge ulterior un element, acesta nu mai revine)
   const rev = input.meta?.defaultsRev ?? 1;
   if (rev < DEFAULTS_REV) {
-    const keys = ["rules", "operations", "protectionDevices", "materials", "cableTypes", "conduitTypes", "boxTypes", "deviceTypes", "circuitTypes", "enclosureTypes", "difficultyFactors"] as const;
+    const keys = ["rules", "operations", "protectionDevices", "materials", "cableTypes", "conduitTypes", "boxTypes", "deviceTypes", "pointPurposes", "circuitTypes", "enclosureTypes", "difficultyFactors"] as const;
     for (const k of keys) {
       const cur = (Array.isArray(out[k]) ? out[k] : []) as { id: string }[];
       for (const item of def[k] as { id: string }[]) if (!cur.some((x) => x.id === item.id)) cur.push(structuredClone(item));
       (out as unknown as Record<string, unknown>)[k] = cur;
+    }
+    if (rev < 6) {
+      // faza la rosu pe doze: operatie de montaj pe tip de doza, punct de iluminat, litere pe destinatii
+      const oldDrivers: Record<string, string> = { "op-doza-rot": "boxes_da_round", "op-doza-mod": "boxes_da_modular", "op-doza-dd": "boxes_dd" };
+      for (const o of out.operations) if (oldDrivers[o.id] && o.driver === oldDrivers[o.id]) o.driver = "box_type_op";
+      for (const b of out.boxTypes) {
+        const d = def.boxTypes.find((x) => x.id === b.id);
+        if (d && (b.operationId === "op-doza-rot" || b.operationId === "op-doza-mod" || !b.operationId)) b.operationId = d.operationId;
+        if (!d && !b.operationId) b.operationId = b.kind === "DD" ? "op-doza-dd" : b.shape === "modulara" ? "op-doza-mod" : "op-doza-rot";
+      }
+      const purposeLetters = new Set(def.pointPurposes.map((x) => x.shortcut));
+      for (const t of out.deviceTypes) {
+        const d = def.deviceTypes.find((x) => x.id === t.id);
+        if (t.category !== "iluminat" && t.shortcut && purposeLetters.has(t.shortcut) && d && !d.shortcut) delete t.shortcut;
+        if (t.category === "iluminat" && !t.needsBox && t.operationId === undefined) t.operationId = "op-punct-il";
+      }
     }
     if (rev < 5) {
       // faza la rosu: cablu NYY-J ingropat direct ca implicit pe prize / iluminat (doar daca tipul era cel implicit vechi)

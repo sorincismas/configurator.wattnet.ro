@@ -3,6 +3,7 @@
  * Fiecare rezultat spune si CAT de sigur este (masurat / estimat / incomplet).
  */
 import type { Cable, Circuit, Conduit, Project, Room, Route, Tracked } from "../model/types";
+import { chainLength } from "./chain";
 
 export type Certainty = "masurat" | "partial" | "estimat" | "necunoscut";
 
@@ -114,7 +115,8 @@ export function circuitCableLength(p: Project, circuit: Circuit): Qty {
   if (e.value !== null) return { value: e.value, certainty: isMeasured(e) ? "masurat" : "estimat", missing: 0 };
   const auto = autoCircuitLength(p, circuit);
   if (auto === null) return { value: null, certainty: "necunoscut", missing: 1 };
-  return { value: auto, certainty: "estimat", missing: 0 };
+  const measured = !circuit.existing && chainLength(p, circuit)?.measured;
+  return { value: auto, certainty: measured ? "masurat" : "estimat", missing: 0 };
 }
 
 /** capetele de legat ale unui circuit: dozele aparat distincte + punctele fara doza */
@@ -136,10 +138,13 @@ export function circuitLimitPoints(p: Project, circuit: Circuit): number {
  * Nu se aplica circuitelor existente sau fara puncte.
  */
 export function autoCircuitLength(p: Project, circuit: Circuit): number | null {
-  if (circuit.existing || !p.fast) return null;
-  const n = circuit.usage === "feeder" ? 0 : circuitEndPoints(p, circuit) || circuit.declaredPoints || 0;
+  if (circuit.existing || !p.fast || circuit.usage === "feeder") return null;
+  const ch = chainLength(p, circuit);
+  if (ch) return ch.value;
+  // circuit fara puncte definite (ex. inlocuire tablou): puncte declarate
+  const n = circuit.declaredPoints || 0;
   if (n === 0) return null;
-  return round(p.fast.panelDistanceM + n * p.fast.metersPerPoint, 1);
+  return round(p.fast.panelDistanceM + (n - 1) * p.fast.metersPerPoint, 1);
 }
 
 /** proiect fara trasee modelate: santul si tubul se estimeaza din lungimea cablurilor */

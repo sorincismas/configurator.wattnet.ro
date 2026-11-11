@@ -3,7 +3,8 @@ import { createDefaultLibrary } from "@/lib/library/default-library";
 import { applyTemplate, createEmptyProject, tracked } from "@/lib/model/factory";
 import { generateCircuits } from "@/lib/engine/circuits";
 import { autoCircuitLength, chaseLength, circuitCableLength, circuitLimitPoints, totalCableLength, totalConduitLength } from "@/lib/engine/measure";
-import { addPoints, changePointType, parseQuickCode, removePoint } from "@/lib/engine/points";
+import { addBoxes, addDeviceToBox, addPoints, applyQuickItems, boxCapacity, boxDevices, changePointType, parseQuickCode, removeBox, removeDeviceFromBox, removePoint } from "@/lib/engine/points";
+import { chainLength, moveInChain, resolveChain, setLinkLength } from "@/lib/engine/chain";
 import { computeLabor } from "@/lib/engine/pricing";
 import { migrateProject } from "@/lib/io/files";
 import type { Project } from "@/lib/model/types";
@@ -17,19 +18,19 @@ const room = (p: Project, n: string) => p.rooms.find((r) => r.name === n)!;
 
 describe("cod rapid", () => {
   const lib = createDefaultLibrary();
-  it("4P 2L 1I", () => {
+  it("4P 2L 1I: doze cu destinatie + puncte de iluminat", () => {
     const r = parseQuickCode(lib, "4P 2L 1I");
     expect(r.errors).toEqual([]);
-    expect(r.items.map((i) => [i.deviceTypeId, i.n])).toEqual([
-      ["dt-priza", 4],
-      ["dt-il-plafon", 2],
-      ["dt-intr-simplu", 1],
+    expect(r.items.map((i) => [i.kind, i.id, i.n])).toEqual([
+      ["doza", "pp-priza", 4],
+      ["punct", "dt-il-plafon", 2],
+      ["doza", "pp-intr", 1],
     ]);
   });
   it("litere lipite si fara numar", () => {
     expect(parseQuickCode(lib, "3p2l").items.map((i) => i.n)).toEqual([3, 2]);
-    expect(parseQuickCode(lib, "PPL").items.map((i) => [i.deviceTypeId, i.n])).toEqual([
-      ["dt-priza", 2],
+    expect(parseQuickCode(lib, "PPL").items.map((i) => [i.id, i.n])).toEqual([
+      ["pp-priza", 2],
       ["dt-il-plafon", 1],
     ]);
   });
@@ -99,15 +100,15 @@ describe("impartire pe circuite", () => {
 });
 
 describe("estimare lungimi", () => {
-  it("lungime = distanta pana la tablou + puncte x metri pe punct; masuratoarea are prioritate", () => {
+  it("lungime = distanta pana la tablou + legaturile dintre doze; masuratoarea are prioritate", () => {
     const p = setup();
     p.fast.panelDistanceM = 10;
     p.fast.metersPerPoint = 4;
     addPoints(p, room(p, "Living").id, "dt-priza", 3);
     generateCircuits(p);
     const c = p.circuits[0];
-    expect(autoCircuitLength(p, c)).toBe(22);
-    expect(circuitCableLength(p, c)).toMatchObject({ value: 22, certainty: "estimat" });
+    expect(autoCircuitLength(p, c)).toBe(18);
+    expect(circuitCableLength(p, c)).toMatchObject({ value: 18, certainty: "estimat" });
     c.estimatedLengthM = tracked(17, "masurat");
     expect(circuitCableLength(p, c)).toMatchObject({ value: 17, certainty: "masurat" });
   });
@@ -143,5 +144,74 @@ describe("migrare", () => {
     expect(m.fast.maxPointsPerCircuit).toBe(6);
     expect(m.library.circuitTypes.find((c) => c.id === "ctp-prize")!.defaultCableTypeId).toBe("ct-nyyj3x25");
     expect(m.library.cableTypes.some((c) => c.id === "ct-nyyj3x25")).toBe(true);
+  });
+});
+
+describe("doze in faza la rosu", () => {
+  it("doza cu destinatie: tipul implicit al destinatiei, consum estimat, intra in circuit", () => {
+    const p = setup();
+    const r = room(p, "Living").id;
+    const [b] = addBoxes(p, r, "pp-priza-mod4", 1);
+    expect(b.boxTypeId).toBe("bt-da-mod4");
+    expect(b.modules).toBe(4);
+    const ph = boxDevices(p, b.id);
+    expect(ph).toHaveLength(1);
+    expect(ph[0]).toMatchObject({ placeholder: true, category: "priza" });
+    expect(ph[0].powerW.value).toBe(600);
+    generateCircuits(p);
+    expect(ph[0].circuitId).not.toBeNull();
+  });
+  it("faza la gata: aparatajul intra in doza dupa module; rezervarea dispare, circuitul ramane", () => {
+    const p = setup();
+    const r = room(p, "Living").id;
+    const [b] = addBoxes(p, r, "pp-priza-mod4", 1);
+    generateCircuits(p);
+    const cid = boxDevices(p, b.id)[0].circuitId;
+    expect(addDeviceToBox(p, b.id, "dt-priza").ok).toBe(true);
+    expect(addDeviceToBox(p, b.id, "dt-priza").ok).toBe(true);
+    expect(boxCapacity(p, b.id)).toEqual({ modules: 4, used: 4, free: 0 });
+    expect(addDeviceToBox(p, b.id, "dt-priza").ok).toBe(false);
+    const ds = boxDevices(p, b.id);
+    expect(ds.every((d) => !d.placeholder && d.circuitId === cid)).toBe(true);
+    removeDeviceFromBox(p, ds[0].id);
+    removeDeviceFromBox(p, ds[1].id);
+    const back = boxDevices(p, b.id);
+    expect(back).toHaveLength(1);
+    expect(back[0]).toMatchObject({ placeholder: true, circuitId: cid });
+    removeBox(p, b.id);
+    expect(p.boxes).toHaveLength(0);
+    expect(p.devices).toHaveLength(0);
+  });
+  it("cod rapid cu doze si puncte de iluminat; deviz pe tipuri de doze si puncte de iluminat", () => {
+    const p = setup();
+    const r = room(p, "Living").id;
+    applyQuickItems(p, r, parseQuickCode(p.library, "3P 1D 2L 1I").items);
+    expect(p.boxes).toHaveLength(5);
+    expect(p.devices.filter((d) => d.category === "iluminat" && !d.boxId)).toHaveLength(2);
+    const lines = computeLabor(p).lines;
+    expect(lines.find((l) => l.operation.id === "op-doza-rot")?.quantity).toBe(4);
+    expect(lines.find((l) => l.operation.id === "op-doza-mod4")?.quantity).toBe(1);
+    expect(lines.find((l) => l.operation.id === "op-punct-il")?.quantity).toBe(2);
+  });
+});
+
+describe("lant pe circuit", () => {
+  it("ordinea si lungimile legaturilor; prima legatura = distanta pana la tablou", () => {
+    const p = setup();
+    p.fast.panelDistanceM = 12;
+    p.fast.metersPerPoint = 3;
+    const r = room(p, "Living").id;
+    const bs = addBoxes(p, r, "pp-priza", 3);
+    generateCircuits(p);
+    const c = p.circuits.find((x) => x.usage === "prize")!;
+    expect(resolveChain(p, c).map((l) => l.memberId)).toEqual(bs.map((b) => b.id));
+    expect(chainLength(p, c)).toEqual({ value: 18, measured: false });
+    moveInChain(p, c.id, bs[2].id, -1);
+    expect(resolveChain(p, c).map((l) => l.memberId)).toEqual([bs[0].id, bs[2].id, bs[1].id]);
+    setLinkLength(p, c.id, bs[0].id, 8);
+    expect(chainLength(p, c)!.value).toBe(14);
+    expect(circuitCableLength(p, c).value).toBe(14);
+    for (const b of bs) setLinkLength(p, c.id, b.id, 2);
+    expect(circuitCableLength(p, c)).toMatchObject({ value: 6, certainty: "masurat" });
   });
 });

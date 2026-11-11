@@ -10,6 +10,7 @@
  * "de_validat" pana la verificarea de catre persoana autorizata.
  */
 import type {
+  PointPurpose,
   AmpacityTable,
   BoxType,
   CableType,
@@ -34,7 +35,7 @@ import type {
 
 export const DEFAULT_LIBRARY_VERSION = "2026.11-exemplu";
 /** creste cand aplicatia adauga elemente noi in biblioteca implicita */
-export const DEFAULTS_REV = 5;
+export const DEFAULTS_REV = 6;
 
 export const firm: FirmSettings = {
   name: "WATTNET",
@@ -190,11 +191,23 @@ const materials: Material[] = [
 const boxTypes: BoxType[] = [
   { id: "bt-da-rot", name: "Doza aparat rotunda D68", kind: "DA", shape: "rotunda", modules: 2, brand: "Gewiss", materialId: "mat-da-rot", operationId: "op-doza-rot" },
   { id: "bt-da-mod3", name: "Doza aparat modulara 3 module", kind: "DA", shape: "modulara", modules: 3, brand: "Gewiss", materialId: "mat-da-mod3", operationId: "op-doza-mod" },
-  { id: "bt-da-mod4", name: "Doza aparat modulara 4 module", kind: "DA", shape: "modulara", modules: 4, brand: "Gewiss", materialId: "mat-da-mod4", operationId: "op-doza-mod" },
-  { id: "bt-da-mod7", name: "Doza aparat modulara 7 module", kind: "DA", shape: "modulara", modules: 7, brand: "Gewiss", materialId: "mat-da-mod7", operationId: "op-doza-mod" },
-  { id: "bt-da-ip", name: "Doza aparenta IP55", kind: "DA", shape: "etansa", modules: 2, brand: "Gewiss", materialId: "mat-doza-ip", operationId: "op-doza-rot" },
+  { id: "bt-da-mod4", name: "Doza aparat modulara 4 module", kind: "DA", shape: "modulara", modules: 4, brand: "Gewiss", materialId: "mat-da-mod4", operationId: "op-doza-mod4" },
+  { id: "bt-da-mod7", name: "Doza aparat modulara 7 module", kind: "DA", shape: "modulara", modules: 7, brand: "Gewiss", materialId: "mat-da-mod7", operationId: "op-doza-mod7" },
+  { id: "bt-da-ip", name: "Doza aparenta IP55", kind: "DA", shape: "etansa", modules: 2, brand: "Gewiss", materialId: "mat-doza-ip", operationId: "op-doza-ip" },
   { id: "bt-dd-100", name: "Doza derivatie 100x100", kind: "DD", shape: "aparenta", modules: 0, brand: "Gewiss", materialId: "mat-dd-100", operationId: "op-doza-dd" },
   { id: "bt-dd-rot", name: "Doza derivatie rotunda D80", kind: "DD", shape: "rotunda", modules: 0, brand: "Gewiss", materialId: "mat-dd-rot", operationId: "op-doza-dd" },
+];
+
+/* ------------------- destinatii doze (faza la rosu) ----------------- */
+/* consumurile sunt valori medii EXEMPLU, de actualizat in Biblioteca */
+const pointPurposes: PointPurpose[] = [
+  { id: "pp-priza", name: "Doza priza", category: "priza", shortcut: "P", boxTypeId: "bt-da-rot", powerW: 300 },
+  { id: "pp-priza-mod4", name: "Doza prize modulara 4M (2 prize)", category: "priza", shortcut: "D", boxTypeId: "bt-da-mod4", powerW: 600 },
+  { id: "pp-priza-tv", name: "Doza priza TV", category: "priza", shortcut: "T", boxTypeId: "bt-da-rot", powerW: 200 },
+  { id: "pp-intr", name: "Doza intrerupator / comutator", category: "intrerupator", shortcut: "I", boxTypeId: "bt-da-rot", powerW: null },
+  { id: "pp-comanda", name: "Doza termostat / senzor", category: "comanda", shortcut: "C", boxTypeId: "bt-da-rot", powerW: 5 },
+  { id: "pp-dedicat", name: "Doza consumator dedicat", category: "consumator_dedicat", shortcut: "E", boxTypeId: "bt-da-rot", powerW: null },
+  { id: "pp-slabi", name: "Doza curenti slabi (date, TV coaxial)", category: "curenti_slabi", shortcut: "R", boxTypeId: "bt-da-rot", powerW: null },
 ];
 
 /* ------------------------ aparate / consumatori -------------------- */
@@ -207,21 +220,21 @@ const D = (
   suggestedPowerW: number | null = null,
   threePhase = false,
   shortcut?: string,
-): DeviceType => ({ id, name, category, modules, needsBox, suggestedPowerW, threePhase, brand: "", materialId: null, ...(shortcut ? { shortcut } : {}) });
+): DeviceType => ({ id, name, category, modules, needsBox, suggestedPowerW, threePhase, brand: "", materialId: null, ...(shortcut ? { shortcut } : {}), ...(category === "iluminat" && !needsBox ? { operationId: "op-punct-il" } : {}) });
 
 /*
  * Puterile sunt CONSUMURI MEDII EXEMPLU pentru estimare (faza la rosu);
  * se actualizeaza in Biblioteca si se corecteaza pe aparat unde se cunoaste puterea reala.
  */
 const deviceTypes: DeviceType[] = [
-  D("dt-priza", "Priza simpla Schuko", "priza", 2, true, 300, false, "P"),
-  D("dt-priza-dubla", "Priza dubla Schuko", "priza", 4, true, 300, false, "D"),
+  D("dt-priza", "Priza simpla Schuko", "priza", 2, true, 300, false),
+  D("dt-priza-dubla", "Priza dubla Schuko", "priza", 4, true, 300, false),
   D("dt-priza-ip", "Priza IP44 (baie / exterior)", "priza", 2, true, 300, false),
-  D("dt-priza-tv", "Priza alimentare TV", "priza", 2, true, 200, false, "T"),
+  D("dt-priza-tv", "Priza alimentare TV", "priza", 2, true, 200, false),
   D("dt-priza-usb", "Priza cu USB", "priza", 2, true, 100, false),
-  D("dt-intr-simplu", "Intrerupator simplu", "intrerupator", 1, true, null, false, "I"),
+  D("dt-intr-simplu", "Intrerupator simplu", "intrerupator", 1, true, null, false),
   D("dt-intr-dublu", "Intrerupator dublu", "intrerupator", 1, true),
-  D("dt-intr-cap", "Comutator cap-scara", "intrerupator", 1, true, null, false, "C"),
+  D("dt-intr-cap", "Comutator cap-scara", "intrerupator", 1, true, null, false),
   D("dt-intr-cruce", "Comutator cruce", "intrerupator", 1, true),
   D("dt-buton", "Buton / sonerie", "comanda", 1, true),
   D("dt-il-plafon", "Punct iluminat plafon", "iluminat", 0, false, 60, false, "L"),
@@ -409,9 +422,13 @@ const operations: Operation[] = [
   O({ id: "op-trasare", code: "OP001", name: "Trasare puncte, doze si trasee", category: "trasare", unit: "buc", rate: 3, timeMin: 2, driver: "points_total", planStageId: "ps-pregatire", subactions: ["Verificare planuri si masuratori", "Confirmare pozitionari cu beneficiarul", "Marcare puncte si trasee"] }),
   O({ id: "op-sant", code: "OP002", name: "Executare sant / canal in perete", category: "sant", unit: "m", rate: 15, timeMin: 6, driver: "route_chase_m", wallSensitive: true, planStageId: "ps-trasee", dependsOn: ["op-trasare"], subactions: ["Taiere cu freza", "Spart si curatat", "Evacuare moloz"] }),
   O({ id: "op-locas", code: "OP003", name: "Executare locas doza", category: "doze", unit: "buc", rate: 10, timeMin: 8, driver: "box_recesses", wallSensitive: true, planStageId: "ps-trasee", dependsOn: ["op-trasare"] }),
-  O({ id: "op-doza-rot", code: "OP004", name: "Montare doza aparat rotunda", category: "doze", unit: "buc", rate: 12, timeMin: 8, driver: "boxes_da_round", planStageId: "ps-doze", dependsOn: ["op-locas"], subactions: ["Fixare doza", "Aliniere si nivelare"] }),
-  O({ id: "op-doza-mod", code: "OP005", name: "Montare doza aparat modulara", category: "doze", unit: "buc", rate: 18, timeMin: 12, driver: "boxes_da_modular", planStageId: "ps-doze", dependsOn: ["op-locas"] }),
-  O({ id: "op-doza-dd", code: "OP006", name: "Montare doza derivatie", category: "doze", unit: "buc", rate: 15, timeMin: 10, driver: "boxes_dd", planStageId: "ps-doze", dependsOn: ["op-locas"] }),
+  O({ id: "op-doza-rot", code: "OP004", name: "Montare doza aparat rotunda D68", category: "doze", unit: "buc", rate: 12, timeMin: 8, driver: "box_type_op", planStageId: "ps-doze", dependsOn: ["op-locas"], subactions: ["Fixare doza", "Aliniere si nivelare"] }),
+  O({ id: "op-doza-mod", code: "OP005", name: "Montare doza aparat modulara 3 module", category: "doze", unit: "buc", rate: 18, timeMin: 12, driver: "box_type_op", planStageId: "ps-doze", dependsOn: ["op-locas"] }),
+  O({ id: "op-doza-mod4", code: "OP021", name: "Montare doza aparat modulara 4 module", category: "doze", unit: "buc", rate: 20, timeMin: 13, driver: "box_type_op", planStageId: "ps-doze", dependsOn: ["op-locas"] }),
+  O({ id: "op-doza-mod7", code: "OP022", name: "Montare doza aparat modulara 7 module", category: "doze", unit: "buc", rate: 25, timeMin: 16, driver: "box_type_op", planStageId: "ps-doze", dependsOn: ["op-locas"] }),
+  O({ id: "op-doza-ip", code: "OP023", name: "Montare doza aparenta IP55", category: "doze", unit: "buc", rate: 15, timeMin: 10, driver: "box_type_op", planStageId: "ps-doze" }),
+  O({ id: "op-doza-dd", code: "OP006", name: "Montare doza derivatie", category: "doze", unit: "buc", rate: 15, timeMin: 10, driver: "box_type_op", planStageId: "ps-doze", dependsOn: ["op-locas"] }),
+  O({ id: "op-punct-il", code: "OP020", name: "Executare punct de iluminat (capat cablu, fixare)", category: "doze", unit: "buc", rate: 10, timeMin: 8, driver: "device_type_op", planStageId: "ps-doze", dependsOn: ["op-trasare"], subactions: ["Locas / gaura in plafon sau perete", "Lasare capat de cablu marcat"] }),
   O({ id: "op-copex", code: "OP007", name: "Montare tub copex", category: "tuburi", unit: "m", rate: 3, timeMin: 1.2, driver: "conduit_m", planStageId: "ps-doze", dependsOn: ["op-sant"], subactions: ["Pozare tub in sant", "Fixare cu ipsos / bride"] }),
   O({ id: "op-cablu", code: "OP008", name: "Tragere cablu / conductoare", category: "cablare", unit: "m", rate: 2.5, timeMin: 1, driver: "cable_m", planStageId: "ps-cablare", dependsOn: ["op-copex"], subactions: ["Masurare segmente", "Pregatire cabluri", "Tragere", "Identificare si etichetare capete"] }),
   O({ id: "op-conex-dd", code: "OP009", name: "Conexiuni in doza de derivatie", category: "cablare", unit: "buc", rate: 10, timeMin: 8, driver: "dd_connections", planStageId: "ps-cablare", dependsOn: ["op-cablu"] }),
@@ -615,6 +632,7 @@ export function createDefaultLibrary(): Library {
     wallTypes,
     difficultyFactors,
     deviceTypes,
+    pointPurposes,
     boxTypes,
     cableTypes,
     conduitTypes,
