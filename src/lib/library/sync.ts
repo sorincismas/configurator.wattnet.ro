@@ -14,7 +14,7 @@
  */
 import type { Library } from "../model/types";
 
-export const CATALOG_KEYS = ["deviceTypes", "boxTypes", "cableTypes", "conduitTypes", "protectionDevices", "enclosureTypes", "installMethods", "roomTypes", "wallTypes", "circuitTypes", "templates"] as const;
+export const CATALOG_KEYS = ["deviceTypes", "pointPurposes", "boxTypes", "cableTypes", "conduitTypes", "protectionDevices", "enclosureTypes", "installMethods", "roomTypes", "wallTypes", "circuitTypes", "templates"] as const;
 
 type WithId = { id: string };
 

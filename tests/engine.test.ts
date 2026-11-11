@@ -194,13 +194,14 @@ describe("manopera, timp, tarif orar implicit", () => {
     expect(line.quantitySource).toBe("manual");
     expect(line.value).toBe(60);
   });
-  it("doze modulare si rotunde se numara separat; DD separat", () => {
+  it("fiecare tip de doza are operatia lui de montaj (deviz pe tipuri de doze)", () => {
     const p = proj();
     const r = p.rooms[0].id;
     p.boxes.push(box(p, "DA", r, "bt-da-rot"), box(p, "DA", r, "bt-da-mod4"), box(p, "DD", r, "bt-dd-100"));
     const l = computeLabor(p).lines;
     expect(l.find((x) => x.operation.id === "op-doza-rot")?.quantity).toBe(1);
-    expect(l.find((x) => x.operation.id === "op-doza-mod")?.quantity).toBe(1);
+    expect(l.find((x) => x.operation.id === "op-doza-mod4")?.quantity).toBe(1);
+    expect(l.find((x) => x.operation.id === "op-doza-mod")).toBeUndefined();
     expect(l.find((x) => x.operation.id === "op-doza-dd")?.quantity).toBe(1);
   });
 });

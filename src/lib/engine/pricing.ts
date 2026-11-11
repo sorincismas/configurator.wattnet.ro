@@ -116,7 +116,7 @@ export function inScope(p: Project, scope: ResolvedScope, id: string, roomId: st
 }
 
 /** cantitatile brute pe incaperi, pentru un driver */
-export function allocationsFor(p: Project, driver: QuantityDriver, scope: ResolvedScope | null = null): Allocation[] {
+export function allocationsFor(p: Project, driver: QuantityDriver, scope: ResolvedScope | null = null, operationId: string | null = null): Allocation[] {
   const rooms = roomById(p);
   const wallOf = (roomId: string | null) => (roomId ? rooms.get(roomId)?.wallTypeId ?? null : null);
   const groupByRoom = (items: { roomId: string | null; id: string; qty?: number; wallTypeId?: string | null }[]): Allocation[] => {
@@ -144,6 +144,16 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
       return groupByRoom(p.boxes.filter((b) => b.kind === "DA" && boxShape(p, b.boxTypeId) === "modulara").map((b) => ({ roomId: b.roomId, id: b.id })));
     case "boxes_da_all":
       return groupByRoom(p.boxes.filter((b) => b.kind === "DA").map((b) => ({ roomId: b.roomId, id: b.id })));
+    case "box_type_op": {
+      const types = new Set(p.library.boxTypes.filter((t) => t.operationId === operationId).map((t) => t.id));
+      // doze fara tip ales: montajul implicit dupa fel (DA / DD)
+      const fallback = (b: { kind: string }) => (b.kind === "DD" ? "op-doza-dd" : "op-doza-rot");
+      return groupByRoom(p.boxes.filter((b) => (b.boxTypeId && p.library.boxTypes.some((t) => t.id === b.boxTypeId) ? types.has(b.boxTypeId) : fallback(b) === operationId)).map((b) => ({ roomId: b.roomId, id: b.id })));
+    }
+    case "device_type_op": {
+      const types = new Set(p.library.deviceTypes.filter((t) => t.operationId === operationId).map((t) => t.id));
+      return groupByRoom(p.devices.filter((d) => !d.boxId && d.deviceTypeId && types.has(d.deviceTypeId)).map((d) => ({ roomId: d.roomId, id: d.id })));
+    }
     case "boxes_dd":
     case "dd_connections":
       return groupByRoom(p.boxes.filter((b) => b.kind === "DD").map((b) => ({ roomId: b.roomId, id: b.id })));
@@ -304,7 +314,7 @@ export function computeLabor(p: Project): LaborResult {
     const rate = ov?.rateOverride ?? op.rate;
     const tUnit = ov?.timeOverrideMin ?? op.timeMin;
 
-    const raw = allocationsFor(p, op.driver, scope);
+    const raw = allocationsFor(p, op.driver, scope, op.id);
     const allocs: LaborAllocation[] = raw
       .filter((a) => a.quantity > 0)
       .map((a) => {

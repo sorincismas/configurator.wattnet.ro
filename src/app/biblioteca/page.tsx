@@ -8,7 +8,7 @@ import { createDefaultLibrary } from "@/lib/library/default-library";
 import { downloadJSON, libraryFileName, libraryToFile } from "@/lib/io/files";
 import { fmtDate, fmtMoney, timeAgo } from "@/lib/format";
 import { uid } from "@/lib/model/ids";
-import type { BoxType, CableType, CircuitType, ConduitType, DeviceType, DifficultyFactor, EnclosureType, Library, Material, Operation, ProtectionDevice, TechnicalRule, WallType } from "@/lib/model/types";
+import type { BoxType, CableType, PointPurpose, CircuitType, ConduitType, DeviceType, DifficultyFactor, EnclosureType, Library, Material, Operation, ProtectionDevice, TechnicalRule, WallType } from "@/lib/model/types";
 import { useActiveProject, useApp } from "@/lib/store/store";
 
 type TabId = "firma" | "operatii" | "materiale" | "protectii" | "tablouri" | "doze" | "cabluri" | "aparate" | "factori" | "circuite" | "reguli" | "tabele" | "sabloane";
@@ -31,6 +31,8 @@ const DRIVERS: { value: Operation["driver"]; label: string }[] = [
   { value: "new_circuits", label: "Circuite noi" },
   { value: "existing_circuits", label: "Circuite existente (reconectate)" },
   { value: "end_points", label: "Capete de legat (doze aparat + puncte fara doza)" },
+  { value: "box_type_op", label: "Doze al caror tip are aceasta operatie" },
+  { value: "device_type_op", label: "Puncte fara doza (iluminat) al caror tip are aceasta operatie" },
   { value: "dd_connections", label: "Conexiuni in doze derivatie" },
   { value: "rooms", label: "Incaperi" },
 ];
@@ -63,6 +65,19 @@ export default function LibraryPage() {
     };
   }
 
+  const opOpts = lib.operations.map((o) => ({ value: o.id, label: `${o.code} ${o.name}` }));
+  const daOpts = lib.boxTypes.filter((t) => t.kind === "DA").map((t) => ({ value: t.id, label: `${t.name} (${t.modules} mod.)` }));
+  /** litera unica intre destinatiile de doza si punctele de iluminat */
+  const setLetter = (kind: "purpose" | "device", id: string, raw: string) => {
+    const v = raw.toUpperCase().replace(/[^A-Z]/g, "");
+    updateLib((l) => {
+      for (const x of l.pointPurposes) if (kind === "purpose" && x.id === id) x.shortcut = v; else if (v && x.shortcut === v) x.shortcut = "";
+      for (const d of l.deviceTypes) if (kind === "device" && d.id === id) d.shortcut = v || undefined; else if (v && d.shortcut === v) d.shortcut = undefined;
+    });
+  };
+  const letterInput = (value: string, onChange: (v: string) => void) => (
+    <input className="h-8 w-11 rounded-md border border-line px-1 text-center text-sm uppercase" maxLength={2} value={value} title="litera pentru adaugare rapida" onChange={(e) => onChange(e.target.value)} />
+  );
   const matOpts = lib.materials.map((m) => ({ value: m.id, label: `${m.name}${m.brand ? " - " + m.brand : ""}` }));
   const exportLib = () => {
     downloadJSON(libraryToFile(lib), libraryFileName(lib));
@@ -229,11 +244,11 @@ export default function LibraryPage() {
       )}
 
       {tab === "doze" && (
-        <Card title="Tipuri de doze" subtitle="Doza rotunda simpla este selectia implicita; dozele modulare au numar de module. Tariful de manopera se aplica per cutie.">
+        <Card title="Tipuri de doze" subtitle="Fiecare tip are materialul (pretul dozei) si operatia de montaj (tariful), deci devizul la rosu apare pe tipuri de doze. Modulele limiteaza aparatajul care incape in doza.">
           <EditableTable<BoxType>
             rows={lib.boxTypes}
             {...listOps("boxTypes")}
-            onAdd={() => listOps("boxTypes").add({ id: uid(), name: "Doza noua", kind: "DA", shape: "rotunda", modules: 2, brand: "Gewiss", materialId: null, operationId: "op-doza-rot" })}
+            onAdd={() => listOps("boxTypes").add({ id: uid(), name: "Doza noua", kind: "DA", shape: "rotunda", modules: 2, brand: "Gewiss", materialId: null, operationId: lib.operations.some((o) => o.id === "op-doza-rot") ? "op-doza-rot" : null })}
             cols={[
               { key: "kind", label: "Tip", type: "select", options: [{ value: "DA", label: "DA - aparat" }, { value: "DD", label: "DD - derivatie" }], width: "130px" },
               { key: "name", label: "Denumire", type: "text" },
@@ -241,6 +256,41 @@ export default function LibraryPage() {
               { key: "modules", label: "Module", type: "number", width: "75px" },
               { key: "brand", label: "Producator", type: "text", width: "110px" },
               { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "220px" },
+              { key: "operationId", label: "Operatie montaj", type: "select", options: opOpts, nullable: true, width: "230px" },
+              {
+                key: "id",
+                label: "Tarif montaj",
+                type: "custom",
+                width: "150px",
+                render: (r) => {
+                  const op = lib.operations.find((o) => o.id === r.operationId);
+                  if (!op) return <span className="text-[11px] text-ink-3">fara operatie</span>;
+                  const shared = lib.boxTypes.filter((t) => t.operationId === op.id).length;
+                  return (
+                    <div className="flex items-center gap-1">
+                      <div className="w-24">
+                        <NumberInput value={op.rate} suffix="lei" onChange={(v) => updateLib((l) => void (l.operations.find((o) => o.id === op.id)!.rate = v ?? 0))} />
+                      </div>
+                      {shared > 1 && (
+                        <button
+                          className="rounded border border-line px-1 text-[10.5px]"
+                          title={`Tariful este comun pentru ${shared} tipuri de doza. Creeaza o operatie proprie pentru acest tip.`}
+                          onClick={() =>
+                            updateLib((l) => {
+                              const n = l.operations.length + 1;
+                              const copy = { ...structuredClone(op), id: uid(), code: `OP${String(100 + n)}`, name: `Montare ${r.name}` };
+                              l.operations.push(copy);
+                              l.boxTypes.find((t) => t.id === r.id)!.operationId = copy.id;
+                            })
+                          }
+                        >
+                          propriu
+                        </button>
+                      )}
+                    </div>
+                  );
+                },
+              },
               {
                 key: "isDefault",
                 label: "Implicit",
@@ -292,7 +342,23 @@ export default function LibraryPage() {
       )}
 
       {tab === "aparate" && (
-        <Card title="Aparate, puncte si consumatori" subtitle="Puterea este un consum mediu folosit la estimare (editabil si pe fiecare punct). Litera apare ca buton de adaugare rapida si in codul rapid (ex. 4P 2L 1I). Curentii slabi nu primesc putere.">
+        <div className="space-y-4">
+        <Card title="Doze pentru faza la rosu" subtitle="Ce adaugi in Puncte si circuite: o doza cu destinatie, tipul de doza implicit si consumul mediu estimat pana se alege aparatajul. Litera se foloseste la butoane si in codul rapid (ex. 4P 1D 2I).">
+          <EditableTable<PointPurpose>
+            rows={lib.pointPurposes}
+            {...listOps("pointPurposes")}
+            onAdd={() => listOps("pointPurposes").add({ id: uid(), name: "Doza noua", category: "priza", shortcut: "", boxTypeId: lib.boxTypes.find((t) => t.kind === "DA")?.id ?? null, powerW: null })}
+            cols={[
+              { key: "name", label: "Denumire", type: "text" },
+              { key: "category", label: "Destinatie", type: "select", options: ["priza", "intrerupator", "comanda", "consumator_dedicat", "curenti_slabi", "altul"].map((v) => ({ value: v, label: v.replace("_", " ") })), width: "170px" },
+              { key: "shortcut", label: "Litera", type: "custom", width: "60px", render: (r) => letterInput(r.shortcut, (v) => setLetter("purpose", r.id, v)) },
+              { key: "boxTypeId", label: "Doza implicita", type: "select", options: daOpts, nullable: true, width: "240px" },
+              { key: "powerW", label: "Consum mediu", type: "number", suffix: "W", width: "120px", nullable: true },
+            ]}
+          />
+          <p className="mt-2 text-xs text-ink-3">Tipurile de doza (marime, module, pret, tarif de montaj) se definesc in fila Doze. Intr-o doza de 4 module incap, de exemplu, doua prize de cate 2 module.</p>
+        </Card>
+        <Card title="Aparataj (faza la gata) si puncte de iluminat" subtitle="Aparatele cu „In doza” se pun in dozele existente dupa numarul de module. Punctele fara doza (iluminat) se adauga direct in faza la rosu, cu operatia lor de manopera. Curentii slabi nu primesc putere.">
           <EditableTable<DeviceType>
             rows={lib.deviceTypes}
             {...listOps("deviceTypes")}
@@ -303,24 +369,8 @@ export default function LibraryPage() {
               { key: "modules", label: "Module doza", type: "number", width: "90px" },
               { key: "needsBox", label: "In doza", type: "checkbox", width: "65px" },
               { key: "suggestedPowerW", label: "Consum mediu", type: "number", suffix: "W", width: "120px", nullable: true },
-              {
-                key: "shortcut",
-                label: "Litera",
-                type: "custom",
-                width: "60px",
-                render: (r) => (
-                  <input
-                    className="h-8 w-11 rounded-md border border-line px-1 text-center text-sm uppercase"
-                    maxLength={2}
-                    value={r.shortcut ?? ""}
-                    title="litera pentru adaugare rapida"
-                    onChange={(e) => {
-                      const v = e.target.value.toUpperCase().replace(/[^A-Z]/g, "");
-                      updateLib((l) => l.deviceTypes.forEach((d) => (d.id === r.id ? (d.shortcut = v || undefined) : v && d.shortcut === v ? (d.shortcut = undefined) : null)));
-                    }}
-                  />
-                ),
-              },
+              { key: "shortcut", label: "Litera", type: "custom", width: "60px", render: (r) => letterInput(r.shortcut ?? "", (v) => setLetter("device", r.id, v)) },
+              { key: "operationId", label: "Operatie (punct fara doza)", type: "select", options: opOpts, nullable: true, width: "220px" },
               { key: "threePhase", label: "Trifazat", type: "checkbox", width: "65px" },
               { key: "brand", label: "Producator", type: "text", width: "110px" },
               {
@@ -332,8 +382,9 @@ export default function LibraryPage() {
               },
             ]}
           />
-          <p className="mt-2 text-xs text-ink-3">„Implicit” = aparatul preselectat in Doze si aparate.</p>
+          <p className="mt-2 text-xs text-ink-3">„Implicit” = aparatul preselectat in Doze si aparate (mod detaliat).</p>
         </Card>
+        </div>
       )}
 
       {tab === "factori" && (

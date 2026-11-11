@@ -249,6 +249,12 @@ export interface Device {
   controlledByIds: ID[];
   /** doza de derivatie prin care se face ramificatia (topologie prin_dd) */
   junctionBoxId?: ID | null;
+  /**
+   * faza la rosu: doza este montata, dar aparatajul nu este ales inca.
+   * Rezervarea pastreaza destinatia (categoria), puterea estimata si circuitul;
+   * dispare cand se pune primul aparat in doza.
+   */
+  placeholder?: boolean;
   status: DataStatus;
   notes: string;
 }
@@ -270,11 +276,21 @@ export interface CircuitProtection {
   rcdItemId: ID | null;
 }
 
+/** o legatura din lantul circuitului: de la elementul anterior (sau tablou) la acest punct */
+export interface ChainLink {
+  /** id-ul dozei (Box) sau al punctului fara doza (Device) */
+  memberId: ID;
+  /** lungimea legaturii; null = estimata din setarile proiectului */
+  lengthM: Tracked<number>;
+}
+
 export interface Circuit {
   id: ID;
   code: string; // CI001
   name: string;
   circuitTypeId: ID | null;
+  /** traseul circuitului ca lant: tablou > doza > doza ... (faza la rosu) */
+  chain?: ChainLink[];
   usage: CircuitUsage;
   panelId: ID | null;
   phase: PhaseAssign | null;
@@ -718,8 +734,23 @@ export interface DeviceType {
   materialId: ID | null;
   /** tipul preselectat la adaugarea aparatelor */
   isDefault?: boolean;
-  /** litera pentru adaugarea rapida (ex. P, L, I) */
+  /** litera pentru adaugarea rapida (ex. L, S, B) */
   shortcut?: string;
+  /** operatia de manopera pentru punctele fara doza de acest tip (ex. punct de iluminat) */
+  operationId?: ID | null;
+}
+
+/**
+ * Destinatie de doza pentru faza la rosu: ce va fi in doza, cu ce tip de doza
+ * se monteaza implicit si ce consum mediu se estimeaza pana la alegerea aparatajului.
+ */
+export interface PointPurpose {
+  id: ID;
+  name: string;
+  category: Exclude<DeviceCategory, "iluminat">;
+  shortcut: string;
+  boxTypeId: ID | null;
+  powerW: number | null;
 }
 
 export interface BoxType {
@@ -830,6 +861,8 @@ export type QuantityDriver =
   | "existing_circuits" // circuite existente reconectate
   | "new_circuits" // circuite noi (fara cele existente)
   | "end_points" // capete de circuit de legat: doze aparat + puncte fara doza
+  | "box_type_op" // doze al caror tip are aceasta operatie de montaj
+  | "device_type_op" // puncte fara doza (ex. iluminat) al caror tip are aceasta operatie
   | "rooms";
 
 export interface Operation {
@@ -942,6 +975,7 @@ export interface Library {
   wallTypes: WallType[];
   difficultyFactors: DifficultyFactor[];
   deviceTypes: DeviceType[];
+  pointPurposes: PointPurpose[];
   boxTypes: BoxType[];
   cableTypes: CableType[];
   conduitTypes: ConduitType[];
