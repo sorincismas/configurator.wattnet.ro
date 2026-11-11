@@ -120,6 +120,7 @@ export function addBoxes(p: Project, roomId: string, purposeId: string, n: numbe
   const out: Box[] = [];
   for (let k = 0; k < Math.max(0, Math.min(50, n)); k++) {
     const b = newBox(p, "DA", roomId, bt);
+    b.purposeId = pp.id;
     p.boxes.push(b);
     p.devices.push(makePlaceholder(p, b, pp.category, pp.powerW));
     out.push(b);
@@ -163,6 +164,13 @@ export function setBoxPurpose(p: Project, boxId: string, purposeId: string) {
   const pp = p.library.pointPurposes.find((x) => x.id === purposeId);
   const box = p.boxes.find((b) => b.id === boxId);
   if (!pp || !box || realBoxDevices(p, boxId).length) return;
+  box.purposeId = pp.id;
+  // doza fara aparataj ia tipul implicit al noii destinatii
+  const bt = pp.boxTypeId ? p.library.boxTypes.find((t) => t.id === pp.boxTypeId) : null;
+  if (bt) {
+    box.boxTypeId = bt.id;
+    box.modules = bt.modules;
+  }
   let ph = boxDevices(p, boxId).find((d) => d.placeholder);
   if (!ph) {
     ph = makePlaceholder(p, box, pp.category, pp.powerW);
@@ -175,7 +183,7 @@ export function setBoxPurpose(p: Project, boxId: string, purposeId: string) {
   }
   ph.category = pp.category;
   ph.label = placeholderLabel(p, pp.category);
-  if (ph.powerW.provenance === "estimat") ph.powerW = tracked(pp.category === "intrerupator" || pp.category === "curenti_slabi" ? null : pp.powerW, "estimat");
+  ph.powerW = tracked(pp.category === "intrerupator" || pp.category === "curenti_slabi" ? null : pp.powerW, "estimat");
 }
 
 /** faza la gata: pune un aparat in doza; rezervarea dispare, circuitul se pastreaza */

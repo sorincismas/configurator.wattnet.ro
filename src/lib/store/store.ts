@@ -11,7 +11,7 @@ import { createDefaultLibrary } from "../library/default-library";
 import { applyTemplate, createEmptyProject, nowISO } from "../model/factory";
 import { migrateLibrary, migrateProject, projectAsTemplate } from "../io/files";
 import { syncCables } from "../engine/cables";
-import { syncCatalogs } from "../library/sync";
+import { absorbMissing } from "../library/sync";
 import type { Library, Project } from "../model/types";
 
 const hasIDB = () => typeof indexedDB !== "undefined";
@@ -48,9 +48,11 @@ export interface AppState {
   setLibrary: (lib: Library) => void;
   updateLibrary: (recipe: (l: Library) => void) => void;
   markLibraryExported: () => void;
-  /** copiaza biblioteca globala in proiect (actiune explicita) */
-  applyLibraryToProject: (id: string) => void;
 }
+
+/** toate proiectele folosesc aceeasi biblioteca (o copie, ca motorul de calcul sa ramana pur) */
+const withLibrary = (projects: Record<string, Project>, lib: Library) =>
+  Object.fromEntries(Object.entries(projects).map(([id, p]) => [id, { ...p, library: structuredClone(lib), libraryAppliedAt: lib.meta.updatedAt }]));
 
 export const useApp = create<AppState>()(
   persist(
@@ -79,7 +81,9 @@ export const useApp = create<AppState>()(
       importProject: (src, mode) => {
         const s = getState();
         let p = migrateProject(src);
-        p.library = syncCatalogs(p.library, s.library);
+        // biblioteca unica: elementele din fisier care lipsesc din biblioteca se adauga, restul ramane neschimbat
+        const lib = absorbMissing(s.library, p.library);
+        p.library = structuredClone(lib);
         let seq = s.projectSeq;
         if (mode === "sablon" || s.projects[p.id]) {
           seq += 1;
@@ -88,7 +92,7 @@ export const useApp = create<AppState>()(
         }
         p.history.push({ at: nowISO(), action: "import", detail: mode === "sablon" ? "Importat ca sablon" : "Importat din fisier" });
         p.lastExportedAt = mode === "original" ? nowISO() : null;
-        setState({ projects: { ...s.projects, [p.id]: p }, order: [p.id, ...s.order.filter((x) => x !== p.id)], activeId: p.id, projectSeq: seq });
+        setState({ library: lib, projects: withLibrary({ ...s.projects, [p.id]: p }, lib), order: [p.id, ...s.order.filter((x) => x !== p.id)], activeId: p.id, projectSeq: seq });
         return p.id;
       },
 
@@ -137,8 +141,7 @@ export const useApp = create<AppState>()(
       setLibrary: (lib) => {
         const next = migrateLibrary(lib);
         const s = getState();
-        const projects = Object.fromEntries(Object.entries(s.projects).map(([id, p]) => [id, { ...p, library: syncCatalogs(p.library, next) }]));
-        setState({ library: next, libraryUpdatedAt: nowISO(), projects });
+        setState({ library: next, libraryUpdatedAt: nowISO(), projects: withLibrary(s.projects, next) });
       },
 
       updateLibrary: (recipe) => {
@@ -146,26 +149,12 @@ export const useApp = create<AppState>()(
         const next = structuredClone(s.library);
         recipe(next);
         next.meta.updatedAt = nowISO();
-        // datele firmei si catalogul tehnic (tipuri doze, aparate, cabluri ...) sunt comune
-        // tuturor proiectelor; tarifele, preturile si regulile raman pe proiect pana la
-        // aplicarea explicita (vezi lib/library/sync.ts)
-        const projects = Object.fromEntries(Object.entries(s.projects).map(([id, p]) => [id, { ...p, library: syncCatalogs(p.library, next) }]));
-        setState({ library: next, libraryUpdatedAt: next.meta.updatedAt, projects });
+        // o singura biblioteca: orice modificare se vede imediat in toate proiectele
+        setState({ library: next, libraryUpdatedAt: next.meta.updatedAt, projects: withLibrary(s.projects, next) });
       },
 
       markLibraryExported: () => setState({ libraryLastExportedAt: nowISO() }),
 
-      applyLibraryToProject: (id) => {
-        const s = getState();
-        s.update(
-          id,
-          (p) => {
-            p.library = structuredClone(s.library);
-            p.libraryAppliedAt = nowISO();
-          },
-          `Biblioteca actualizata din biblioteca globala (${s.library.meta.version})`,
-        );
-      },
     }),
     {
       name: "configurator.wattnet.ro",
@@ -182,12 +171,16 @@ export const useApp = create<AppState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.library = migrateLibrary(state.library);
+          let lib = migrateLibrary(state.library);
+          const migrated: Record<string, Project> = {};
           for (const k of Object.keys(state.projects)) {
             const p = migrateProject(state.projects[k]);
-            p.library = syncCatalogs(p.library, state.library);
-            state.projects[k] = p;
+            // trecerea la biblioteca unica: ce exista doar in copia unui proiect se pastreaza
+            lib = absorbMissing(lib, p.library);
+            migrated[k] = p;
           }
+          state.library = lib;
+          state.projects = withLibrary(migrated, lib);
         }
         useApp.getState().setHydrated();
       },

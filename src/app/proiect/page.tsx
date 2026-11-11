@@ -25,7 +25,7 @@ const STATUSES: { value: ProjectStatus; label: string }[] = [
 function ProjectInfoPage() {
   const p = useActiveProject()!;
   const up = useUpdateActive();
-  const { markExported, applyLibraryToProject, library } = useApp();
+  const { markExported } = useApp();
   const i = p.info;
   const setInfo = <K extends keyof typeof i>(k: K, v: (typeof i)[K]) => up((x) => void (x.info[k] = v));
   const setClient = (k: keyof typeof i.client, v: string) => up((x) => void (x.info.client[k] = v));
@@ -33,7 +33,6 @@ function ProjectInfoPage() {
     up((x) => {
       x.info.phases = on ? [...new Set([...x.info.phases, ph])] : x.info.phases.filter((f) => f !== ph);
     });
-  const libDiffers = p.library.meta.version !== library.meta.version || p.library.meta.updatedAt !== library.meta.updatedAt;
 
   return (
     <div className="max-w-5xl space-y-4">
@@ -87,21 +86,6 @@ function ProjectInfoPage() {
           <Field label="Ipoteze"><TextArea value={i.assumptionsText} onChange={(v) => setInfo("assumptionsText", v)} rows={4} /></Field>
           <Field label="Excluderi / limite"><TextArea value={i.exclusionsText} onChange={(v) => setInfo("exclusionsText", v)} rows={4} /></Field>
           <Field label="Note interne (nu apar in oferta)" className="md:col-span-2"><TextArea value={i.designerNotes} onChange={(v) => setInfo("designerNotes", v)} rows={2} /></Field>
-        </div>
-      </Card>
-
-      <Card
-        title="Biblioteca proiectului"
-        subtitle="Proiectul are propria copie a tarifelor, materialelor si regulilor. Modificarile din biblioteca globala se aplica doar prin actiune explicita."
-        actions={
-          <Button size="sm" disabled={!libDiffers} onClick={() => applyLibraryToProject(p.id)}>
-            Aplica biblioteca globala in proiect
-          </Button>
-        }
-      >
-        <div className="grid gap-2 text-sm md:grid-cols-2">
-          <p>In proiect: <b>{p.library.meta.version}</b> <span className="text-ink-3">(aplicata {fmtDate(p.libraryAppliedAt)})</span></p>
-          <p>Globala: <b>{library.meta.version}</b> <span className="text-ink-3">(modificata {fmtDate(library.meta.updatedAt)})</span> {libDiffers ? <Badge tone="warn">difera</Badge> : <Badge tone="ok">identica</Badge>}</p>
         </div>
       </Card>
 

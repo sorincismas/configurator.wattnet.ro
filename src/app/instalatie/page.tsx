@@ -378,11 +378,7 @@ function RoomItems({ p, up, roomId, selected, onSelect }: { p: Project; up: Up; 
   const purposes = lib.pointPurposes;
   const lights = lib.deviceTypes.filter((t) => t.category === "iluminat");
   const updateLibrary = useApp((a) => a.updateLibrary);
-  const restorePurposes = () => {
-    const def = createDefaultLibrary().pointPurposes;
-    updateLibrary((l) => void (l.pointPurposes = structuredClone(def)));
-    up((x) => void (x.library.pointPurposes = structuredClone(def)), "Destinatii de doza implicite adaugate");
-  };
+  const restorePurposes = () => updateLibrary((l) => void (l.pointPurposes = structuredClone(createDefaultLibrary().pointPurposes)));
   const [code, setCode] = useState("");
   const [boxType, setBoxType] = useState("");
   const parsed = code.trim() ? parseQuickCode(lib, code) : null;
@@ -520,7 +516,7 @@ function BoxDetail({ p, up, boxId, onDeleted }: { p: Project; up: Up; boxId: str
   const locked = devs.some((d) => d.circuitLocked);
   const [aparat, setAparat] = useState("");
   const [err, setErr] = useState("");
-  const purposeNow = lib.pointPurposes.find((x) => ph && x.category === ph.category);
+  const purposeNow = lib.pointPurposes.find((x) => x.id === box.purposeId) ?? lib.pointPurposes.find((x) => ph && x.category === ph.category);
   // aparatajul care se poate pune in doza: tot ce nu este punct de iluminat fara doza
   const candidates = lib.deviceTypes.filter((t) => t.needsBox || t.category !== "iluminat");
   const fitsType = (t: (typeof candidates)[number]) => box.modules === 0 || t.modules <= cap.free;
