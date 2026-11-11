@@ -10,33 +10,9 @@ import { fmtDate, fmtMoney, timeAgo } from "@/lib/format";
 import { uid } from "@/lib/model/ids";
 import type { BoxType, CableType, PointPurpose, CircuitType, ConduitType, DeviceType, DifficultyFactor, EnclosureType, Library, Material, Operation, ProtectionDevice, TechnicalRule, WallType } from "@/lib/model/types";
 import { useApp } from "@/lib/store/store";
+import { GENERAL_SOURCES, operationSource } from "@/lib/engine/sources";
 
 type TabId = "firma" | "operatii" | "materiale" | "protectii" | "tablouri" | "doze" | "cabluri" | "aparate" | "factori" | "circuite" | "reguli" | "tabele" | "sabloane";
-
-const DRIVERS: { value: Operation["driver"]; label: string }[] = [
-  { value: "manual", label: "Manual (cantitate introdusa in deviz)" },
-  { value: "points_total", label: "Toate punctele (doze + tablouri + puncte fara doza)" },
-  { value: "boxes_da_round", label: "Doze aparat rotunde / etanse" },
-  { value: "boxes_da_modular", label: "Doze aparat modulare" },
-  { value: "boxes_da_all", label: "Toate dozele aparat" },
-  { value: "boxes_dd", label: "Doze derivatie" },
-  { value: "box_recesses", label: "Locasuri doze (ingropate)" },
-  { value: "route_chase_m", label: "Metri sant (o data / traseu)" },
-  { value: "conduit_m", label: "Metri copex" },
-  { value: "cable_m", label: "Metri cablu (pe circuit)" },
-  { value: "feeder_m", label: "Metri alimentare intre tablouri" },
-  { value: "panels", label: "Tablouri" },
-  { value: "panel_items", label: "Aparate modulare in tablou" },
-  { value: "circuits", label: "Circuite (toate)" },
-  { value: "new_circuits", label: "Circuite noi" },
-  { value: "existing_circuits", label: "Circuite existente (reconectate)" },
-  { value: "end_points", label: "Capete de legat (doze aparat + puncte fara doza)" },
-  { value: "box_type_op", label: "Doze al caror tip are aceasta operatie" },
-  { value: "device_type_op", label: "Puncte fara doza (iluminat) al caror tip are aceasta operatie" },
-  { value: "device_install_op", label: "La gata: aparate / corpuri al caror tip are aceasta operatie" },
-  { value: "dd_connections", label: "Conexiuni in doze derivatie" },
-  { value: "rooms", label: "Incaperi" },
-];
 const UNITS = ["buc", "m", "ora", "set", "circuit", "tablou", "proiect"].map((u) => ({ value: u, label: u }));
 const CATEGORIES = ["trasare", "sant", "doze", "tuburi", "cablare", "tablou", "aparataj", "verificari", "diverse"].map((u) => ({ value: u, label: u }));
 
@@ -60,7 +36,6 @@ export default function LibraryPage() {
     };
   }
 
-  const opOpts = lib.operations.map((o) => ({ value: o.id, label: `${o.code} ${o.name}` }));
   const daOpts = lib.boxTypes.filter((t) => t.kind === "DA").map((t) => ({ value: t.id, label: `${t.name} (${t.modules} mod.)` }));
   /** litera unica intre destinatiile de doza si punctele de iluminat */
   const setLetter = (kind: "purpose" | "device", id: string, raw: string) => {
@@ -73,6 +48,55 @@ export default function LibraryPage() {
   const letterInput = (value: string, onChange: (v: string) => void) => (
     <input className="h-8 w-11 rounded-md border border-line px-1 text-center text-sm uppercase" maxLength={2} value={value} title="litera pentru adaugare rapida" onChange={(e) => onChange(e.target.value)} />
   );
+  /**
+   * Pretul de executie al unui element din catalog: operatia legata (aleasa sau proprie) si tariful ei.
+   * Fara operatie proprie se foloseste operatia generala (daca exista una pentru acel fel de element).
+   */
+  type ExecCfg = { list: "boxTypes" | "deviceTypes" | "cableTypes" | "conduitTypes" | "enclosureTypes" | "protectionDevices"; field: "operationId" | "installOperationId"; typed: Operation["driver"]; general?: Operation["driver"]; prefix: string; category: string; unit: Operation["unit"]; phase?: Operation["phase"]; stage?: string };
+  const execCell = (r: { id: string; name: string }, cfg: ExecCfg) => {
+    const rows = lib[cfg.list] as unknown as Record<string, unknown>[];
+    const opId = (rows.find((x) => x.id === r.id)?.[cfg.field] as string | null | undefined) ?? null;
+    const op = lib.operations.find((o) => o.id === opId);
+    const general = cfg.general ? lib.operations.find((o) => o.driver === cfg.general && o.active) : undefined;
+    const shared = op ? rows.filter((x) => x[cfg.field] === op.id).length : 0;
+    const link = (id: string | null) => updateLib((l) => void ((l[cfg.list] as unknown as Record<string, unknown>[]).find((x) => x.id === r.id)![cfg.field] = id));
+    const own = () =>
+      updateLib((l) => {
+        const base = op ?? general;
+        const max = Math.max(0, ...l.operations.map((o) => parseInt(o.code.replace(/\D/g, ""), 10) || 0));
+        const copy: Operation = {
+          ...(base ? structuredClone(base) : { phase: cfg.phase ?? "rosu", category: cfg.category, unit: cfg.unit, rate: 0, timeMin: 0, wallSensitive: false, subactions: [], planStageId: cfg.stage ?? null, dependsOn: [], parallelizable: true, active: true, validFrom: null, validTo: null }),
+          id: uid(),
+          code: `OP${String(max + 1).padStart(3, "0")}`,
+          name: `${cfg.prefix} ${r.name}`,
+          driver: cfg.typed,
+          isExample: false,
+        } as Operation;
+        l.operations.push(copy);
+        (l[cfg.list] as unknown as Record<string, unknown>[]).find((x) => x.id === r.id)![cfg.field] = copy.id;
+      });
+    return (
+      <div className="flex items-center gap-1">
+        <Select
+          className="w-48 text-[12px]"
+          value={op?.id ?? ""}
+          placeholder={general ? `general: ${general.code} · ${general.rate} lei` : "fara pret de executie"}
+          onChange={(v) => link(v || null)}
+          options={lib.operations.filter((o) => o.driver === cfg.typed).map((o) => ({ value: o.id, label: `${o.code} ${o.name}` }))}
+        />
+        {op && (
+          <div className="w-24">
+            <NumberInput value={op.rate} suffix={`lei/${op.unit}`} onChange={(v) => updateLib((l) => void (l.operations.find((o) => o.id === op.id)!.rate = v ?? 0))} />
+          </div>
+        )}
+        {(!op || shared > 1) && (
+          <button className="whitespace-nowrap rounded border border-line px-1.5 py-1 text-[11px] hover:bg-paper" title={op ? `Tariful este comun pentru ${shared} elemente. Creeaza un pret propriu pentru acesta.` : "Creeaza o operatie cu pret propriu pentru acest element; apare in fila Operatii si tarife."} onClick={own}>
+            pret propriu
+          </button>
+        )}
+      </div>
+    );
+  };
   const matOpts = lib.materials.map((m) => ({ value: m.id, label: `${m.name}${m.brand ? " - " + m.brand : ""}` }));
   const exportLib = () => {
     downloadJSON(libraryToFile(lib), libraryFileName(lib));
@@ -145,7 +169,27 @@ export default function LibraryPage() {
               { key: "unit", label: "UM", type: "select", options: UNITS, width: "105px" },
               { key: "rate", label: "Tarif", type: "number", suffix: "lei", width: "100px" },
               { key: "timeMin", label: "Timp", type: "number", suffix: "min", width: "95px" },
-              { key: "driver", label: "Sursa cantitate", type: "select", options: DRIVERS, width: "220px" },
+              {
+                key: "driver",
+                label: "Sursa cantitate (de unde se preia)",
+                type: "custom",
+                width: "270px",
+                render: (r, set) => {
+                  const src = operationSource(lib, r);
+                  return (
+                    <div className="space-y-0.5">
+                      <Select value={r.driver} onChange={(v) => set({ driver: v })} options={[...(src.linked ? [{ value: r.driver, label: `Din fila ${src.origin}` }] : []), ...GENERAL_SOURCES]} />
+                      {src.linked ? (
+                        <button className="block max-w-[260px] truncate text-left text-[11px] text-blue-700 underline" title={src.detail} onClick={() => src.tab && setTab(src.tab)}>
+                          → {src.detail}
+                        </button>
+                      ) : (
+                        <span className="block text-[11px] text-ink-3">{src.origin}</span>
+                      )}
+                    </div>
+                  );
+                },
+              },
               { key: "planStageId", label: "Etapa plan", type: "select", options: lib.planStages.map((s) => ({ value: s.id, label: s.name })), nullable: true, width: "150px" },
               { key: "wallSensitive", label: "Factor perete", type: "checkbox", width: "60px" },
               { key: "parallelizable", label: "Paralel", type: "checkbox", width: "55px" },
@@ -202,6 +246,7 @@ export default function LibraryPage() {
               { key: "breakingCapacityKA", label: "Icn", type: "number", suffix: "kA", width: "80px", nullable: true },
               { key: "modules", label: "Module", type: "number", width: "70px" },
               { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "200px" },
+              { key: "operationId", label: "Pret executie (montaj pe sina)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "protectionDevices", field: "operationId", typed: "protection_type_op", general: "panel_items", prefix: "Montare", category: "tablou", unit: "buc", stage: "ps-tablouri" }) },
             ]}
           />
         </Card>
@@ -221,6 +266,7 @@ export default function LibraryPage() {
               { key: "modulesPerRow", label: "Module / rand", type: "number", width: "100px" },
               { key: "id", label: "Total", type: "custom", width: "70px", render: (r) => <span className="tabular-nums">{r.rows * r.modulesPerRow}</span> },
               { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "220px" },
+              { key: "operationId", label: "Pret executie (montaj cutie)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "enclosureTypes", field: "operationId", typed: "enclosure_type_op", general: "panels", prefix: "Montare", category: "tablou", unit: "tablou", stage: "ps-tablouri" }) },
             ]}
           />
         </Card>
@@ -239,41 +285,7 @@ export default function LibraryPage() {
               { key: "modules", label: "Module", type: "number", width: "75px" },
               { key: "brand", label: "Producator", type: "text", width: "110px" },
               { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "220px" },
-              { key: "operationId", label: "Operatie montaj", type: "select", options: opOpts, nullable: true, width: "230px" },
-              {
-                key: "id",
-                label: "Tarif montaj",
-                type: "custom",
-                width: "150px",
-                render: (r) => {
-                  const op = lib.operations.find((o) => o.id === r.operationId);
-                  if (!op) return <span className="text-[11px] text-ink-3">fara operatie</span>;
-                  const shared = lib.boxTypes.filter((t) => t.operationId === op.id).length;
-                  return (
-                    <div className="flex items-center gap-1">
-                      <div className="w-24">
-                        <NumberInput value={op.rate} suffix="lei" onChange={(v) => updateLib((l) => void (l.operations.find((o) => o.id === op.id)!.rate = v ?? 0))} />
-                      </div>
-                      {shared > 1 && (
-                        <button
-                          className="rounded border border-line px-1 text-[10.5px]"
-                          title={`Tariful este comun pentru ${shared} tipuri de doza. Creeaza o operatie proprie pentru acest tip.`}
-                          onClick={() =>
-                            updateLib((l) => {
-                              const n = l.operations.length + 1;
-                              const copy = { ...structuredClone(op), id: uid(), code: `OP${String(100 + n)}`, name: `Montare ${r.name}` };
-                              l.operations.push(copy);
-                              l.boxTypes.find((t) => t.id === r.id)!.operationId = copy.id;
-                            })
-                          }
-                        >
-                          propriu
-                        </button>
-                      )}
-                    </div>
-                  );
-                },
-              },
+              { key: "operationId", label: "Pret executie (montaj)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "boxTypes", field: "operationId", typed: "box_type_op", prefix: "Montare", category: "doze", unit: "buc", stage: "ps-doze" }) },
               {
                 key: "isDefault",
                 label: "Implicit",
@@ -305,6 +317,7 @@ export default function LibraryPage() {
                 { key: "loadedConductors", label: "Incarcate", type: "custom", width: "80px", render: (r, set) => <Select value={String(r.loadedConductors) as "2" | "3"} onChange={(v) => set({ loadedConductors: v === "3" ? 3 : 2 })} options={[{ value: "2", label: "2" }, { value: "3", label: "3" }]} /> },
                 { key: "crossSectionMm2", label: "Sectiune", type: "number", suffix: "mm²", width: "100px" },
                 { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "200px" },
+                { key: "operationId", label: "Pret executie (tragere cablu)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "cableTypes", field: "operationId", typed: "cable_type_op", general: "cable_m", prefix: "Tragere cablu", category: "cablare", unit: "m", stage: "ps-cablare" }) },
                 { key: "materialQtyPerM", label: "Material / m", type: "number", width: "90px" },
               ]}
             />
@@ -318,6 +331,7 @@ export default function LibraryPage() {
                 { key: "name", label: "Denumire", type: "text" },
                 { key: "diameterMm", label: "Diametru", type: "number", suffix: "mm", width: "100px" },
                 { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "240px" },
+                { key: "operationId", label: "Pret executie (montaj tub)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "conduitTypes", field: "operationId", typed: "conduit_type_op", general: "conduit_m", prefix: "Montare", category: "tuburi", unit: "m", stage: "ps-doze" }) },
               ]}
             />
           </Card>
@@ -373,8 +387,8 @@ export default function LibraryPage() {
               { key: "needsBox", label: "In doza", type: "checkbox", width: "65px" },
               { key: "suggestedPowerW", label: "Consum mediu", type: "number", suffix: "W", width: "120px", nullable: true },
               { key: "shortcut", label: "Litera", type: "custom", width: "60px", render: (r) => letterInput(r.shortcut ?? "", (v) => setLetter("device", r.id, v)) },
-              { key: "operationId", label: "La rosu: operatie punct fara doza", type: "select", options: opOpts.filter((o) => lib.operations.find((x) => x.id === o.value)?.phase === "rosu"), nullable: true, width: "220px" },
-              { key: "installOperationId", label: "La gata: operatie montaj", type: "select", options: opOpts.filter((o) => lib.operations.find((x) => x.id === o.value)?.phase === "gata"), nullable: true, width: "220px" },
+              { key: "operationId", label: "Pret executie la rosu (punct fara doza)", type: "custom", width: "390px", render: (r) => (r.needsBox ? <span className="text-[11px] text-ink-3">prin doza</span> : execCell(r, { list: "deviceTypes", field: "operationId", typed: "device_type_op", prefix: "Executare punct", category: "doze", unit: "buc", stage: "ps-doze" })) },
+              { key: "installOperationId", label: "Pret executie la gata (montaj)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "deviceTypes", field: "installOperationId", typed: "device_install_op", prefix: "Montare", category: "aparataj", unit: "buc", phase: "gata", stage: "ps-aparataj" }) },
               { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "200px" },
               { key: "threePhase", label: "Trifazat", type: "checkbox", width: "65px" },
               { key: "brand", label: "Producator", type: "text", width: "110px" },

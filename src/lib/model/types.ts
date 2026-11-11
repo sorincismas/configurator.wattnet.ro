@@ -788,6 +788,8 @@ export interface CableType {
   /** material din catalog si cantitatea de material per metru de circuit */
   materialId: ID | null;
   materialQtyPerM: number;
+  /** operatie proprie de executie (tarif propriu); fara ea se foloseste operatia generala */
+  operationId?: ID | null;
 }
 
 export interface ConduitType {
@@ -795,6 +797,8 @@ export interface ConduitType {
   name: string;
   diameterMm: number;
   materialId: ID | null;
+  /** operatie proprie de executie (tarif propriu); fara ea se foloseste operatia generala */
+  operationId?: ID | null;
 }
 
 export type ProtectionKind = "MCB" | "RCD" | "RCBO" | "SPD" | "separator" | "releu" | "contactor" | "contor" | "altul";
@@ -814,6 +818,8 @@ export interface ProtectionDevice {
   /** latime in module DIN (18 mm) */
   modules: number;
   materialId: ID | null;
+  /** operatie proprie de executie (tarif propriu); fara ea se foloseste operatia generala */
+  operationId?: ID | null;
 }
 
 export interface EnclosureType {
@@ -824,6 +830,8 @@ export interface EnclosureType {
   rows: number;
   modulesPerRow: number;
   materialId: ID | null;
+  /** operatie proprie de executie (tarif propriu); fara ea se foloseste operatia generala */
+  operationId?: ID | null;
 }
 
 export interface InstallMethod {
@@ -869,6 +877,10 @@ export type QuantityDriver =
   | "end_points" // capete de circuit de legat: doze aparat + puncte fara doza
   | "box_type_op" // doze al caror tip are aceasta operatie de montaj
   | "device_type_op" // puncte fara doza (ex. iluminat) al caror tip are aceasta operatie
+  | "cable_type_op" // metri de cablu ai tipurilor de cablu legate de aceasta operatie
+  | "conduit_type_op" // metri de tub ai tipurilor de tub legate de aceasta operatie
+  | "enclosure_type_op" // cutii de tablou ale tipurilor legate de aceasta operatie
+  | "protection_type_op" // aparate de tablou ale tipurilor legate de aceasta operatie
   | "device_install_op" // faza la gata: aparate / corpuri al caror tip are aceasta operatie de montaj
   | "rooms";
 
