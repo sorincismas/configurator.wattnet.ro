@@ -9,6 +9,7 @@
  * dupa Normativul I7-2011 (anexele 5.10, 5.18, 5.19) si sunt marcate
  * "de_validat" pana la verificarea de catre persoana autorizata.
  */
+import { normalizeLinks } from "./links";
 import type {
   PointPurpose,
   AmpacityTable,
@@ -651,7 +652,7 @@ const templates: ProjectTemplate[] = [
 
 export function createDefaultLibrary(): Library {
   // clonare profunda ca biblioteca sa poata fi modificata fara efecte globale
-  return structuredClone({
+  return normalizeLinks(structuredClone({
     meta: {
       name: "Biblioteca WATTNET",
       version: DEFAULT_LIBRARY_VERSION,
@@ -679,5 +680,5 @@ export function createDefaultLibrary(): Library {
     ampacityTables,
     correctionTables,
     templates,
-  } satisfies Library);
+  } satisfies Library));
 }

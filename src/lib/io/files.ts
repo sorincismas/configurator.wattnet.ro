@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { createDefaultLibrary, defaultInstallOp, DEFAULTS_REV, DEVICE_MATERIAL } from "../library/default-library";
 import { uid } from "../model/ids";
+import { normalizeLinks } from "../library/links";
 import { defaultFastSettings, nowISO, projectCode } from "../model/factory";
 import { SCHEMA_VERSION, type Library, type LibraryFile, type Project, type ProjectFile } from "../model/types";
 
@@ -115,6 +116,7 @@ export function migrateLibrary(input: Partial<Library>): Library {
       if (d && r.validation === "de_validat" && (r.reference.startsWith("de completat") || r.id === "r-sectiune-min")) Object.assign(r, { title: d.title, reference: d.reference, params: d.params, conditions: d.conditions });
     }
   }
+  normalizeLinks(out);
   // destinatiile de doza sunt necesare pentru faza la rosu: o lista goala se completeaza cu cele implicite
   if (!Array.isArray(out.pointPurposes) || out.pointPurposes.length === 0) out.pointPurposes = structuredClone(def.pointPurposes);
   out.firm = { ...def.firm, ...(input.firm ?? {}) };

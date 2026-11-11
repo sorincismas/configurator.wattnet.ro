@@ -324,13 +324,46 @@ describe("pret de executie propriu pe elemente din catalog", () => {
     const total = q("op-cablu");
     expect(total).toBeGreaterThan(0);
     const base = p.library.operations.find((o) => o.id === "op-cablu")!;
-    p.library.operations.push({ ...structuredClone(base), id: "op-own", code: "OP900", name: "Tragere cablu NYY-J 3x2,5", driver: "cable_type_op", rate: 4 });
-    p.library.cableTypes.find((t) => t.id === "ct-nyyj3x25")!.operationId = "op-own";
+    p.library.operations.push({ ...structuredClone(base), id: "op-own", code: "OP900", name: "Tragere cablu NYY-J 3x2,5", driver: "cable_type_op", rate: 4, itemIds: ["ct-nyyj3x25"] });
     expect(q("op-own")).toBeGreaterThan(0);
     expect(q("op-own") + q("op-cablu")).toBeCloseTo(total, 3);
     const src = operationSource(p.library, p.library.operations.find((o) => o.id === "op-own")!);
     expect(src).toMatchObject({ linked: true, tab: "cabluri", items: ["NYY-J 3x2,5"] });
     expect(sourceText(p.library, base)).toContain("Metri cablu");
     expect(operationSource(p.library, p.library.operations.find((o) => o.id === "op-doza-rot")!).origin).toBe("Doze");
+  });
+});
+
+describe("mai multe operatii pe acelasi tip de doza", () => {
+  it("locas diferentiat pe module + montare cu tarif comun", () => {
+    const p = setup();
+    const r = room(p, "Living").id;
+    applyQuickItems(p, r, parseQuickCode(p.library, "3P 2D").items); // 3 x D68, 2 x modulara 4M
+    const lib = p.library;
+    const locas = lib.operations.find((o) => o.id === "op-locas")!;
+    expect(locas.driver).toBe("box_type_op");
+    const q = (id: string) => computeLabor(p).lines.find((l) => l.operation.id === id)?.quantity ?? 0;
+    expect(q("op-locas")).toBe(5);
+    // locas separat pentru 4 module
+    locas.itemIds = locas.itemIds!.filter((i) => i !== "bt-da-mod4");
+    lib.operations.push({ ...structuredClone(locas), id: "op-locas-4", code: "OP901", name: "Executare locas doza 4 module", rate: 18, itemIds: ["bt-da-mod4"] });
+    expect(q("op-locas")).toBe(3);
+    expect(q("op-locas-4")).toBe(2);
+    // montare: un singur tarif pentru ambele tipuri
+    const montare = lib.operations.find((o) => o.id === "op-doza-rot")!;
+    montare.itemIds = ["bt-da-rot", "bt-da-mod4"];
+    lib.operations.find((o) => o.id === "op-doza-mod4")!.itemIds = [];
+    expect(q("op-doza-rot")).toBe(5);
+    expect(q("op-doza-mod4")).toBe(0);
+  });
+  it("biblioteca veche (legatura pe element) se converteste la lista pe operatie", () => {
+    const p = setup();
+    const lib = p.library;
+    for (const o of lib.operations) delete o.itemIds;
+    lib.operations.find((o) => o.id === "op-locas")!.driver = "box_recesses";
+    const m = migrateProject(p).library;
+    expect(m.operations.find((o) => o.id === "op-doza-mod4")!.itemIds).toEqual(["bt-da-mod4"]);
+    expect(m.operations.find((o) => o.id === "op-g-spot")!.itemIds).toEqual(["dt-il-spot"]);
+    expect(m.operations.find((o) => o.id === "op-locas")!.itemIds).toContain("bt-da-rot");
   });
 });

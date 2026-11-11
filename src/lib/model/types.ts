@@ -894,6 +894,11 @@ export interface Operation {
   rate: number; // lei / unitate
   timeMin: number; // minute / unitate
   driver: QuantityDriver;
+  /**
+   * pentru sursele „din fila ...”: elementele din catalog (tipuri de doza, aparate, cabluri ...)
+   * la care se aplica operatia. Un element poate avea mai multe operatii (ex. locas + montare).
+   */
+  itemIds?: ID[];
   /** factorii de dificultate care pot afecta operatia (prin tipul de perete / incapere) */
   wallSensitive: boolean;
   subactions: string[];
