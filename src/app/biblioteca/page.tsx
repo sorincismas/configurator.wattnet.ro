@@ -10,7 +10,8 @@ import { fmtDate, fmtMoney, timeAgo } from "@/lib/format";
 import { uid } from "@/lib/model/ids";
 import type { BoxType, CableType, PointPurpose, CircuitType, ConduitType, DeviceType, DifficultyFactor, EnclosureType, Library, Material, Operation, ProtectionDevice, TechnicalRule, WallType } from "@/lib/model/types";
 import { useApp } from "@/lib/store/store";
-import { GENERAL_SOURCES, operationSource } from "@/lib/engine/sources";
+import { GENERAL_SOURCES, LINKED_SOURCES, operationSource } from "@/lib/engine/sources";
+import { linkItems } from "@/lib/library/links";
 
 type TabId = "firma" | "operatii" | "materiale" | "protectii" | "tablouri" | "doze" | "cabluri" | "aparate" | "factori" | "circuite" | "reguli" | "tabele" | "sabloane";
 const UNITS = ["buc", "m", "ora", "set", "circuit", "tablou", "proiect"].map((u) => ({ value: u, label: u }));
@@ -52,48 +53,50 @@ export default function LibraryPage() {
    * Pretul de executie al unui element din catalog: operatia legata (aleasa sau proprie) si tariful ei.
    * Fara operatie proprie se foloseste operatia generala (daca exista una pentru acel fel de element).
    */
-  type ExecCfg = { list: "boxTypes" | "deviceTypes" | "cableTypes" | "conduitTypes" | "enclosureTypes" | "protectionDevices"; field: "operationId" | "installOperationId"; typed: Operation["driver"]; general?: Operation["driver"]; prefix: string; category: string; unit: Operation["unit"]; phase?: Operation["phase"]; stage?: string };
+  type ExecCfg = { typed: Operation["driver"]; general?: Operation["driver"]; prefix: string; category: string; unit: Operation["unit"]; phase?: Operation["phase"]; stage?: string };
   const execCell = (r: { id: string; name: string }, cfg: ExecCfg) => {
-    const rows = lib[cfg.list] as unknown as Record<string, unknown>[];
-    const opId = (rows.find((x) => x.id === r.id)?.[cfg.field] as string | null | undefined) ?? null;
-    const op = lib.operations.find((o) => o.id === opId);
+    const typedOps = lib.operations.filter((o) => o.driver === cfg.typed);
+    const mine = typedOps.filter((o) => (o.itemIds ?? []).includes(r.id));
+    const others = typedOps.filter((o) => !mine.includes(o));
     const general = cfg.general ? lib.operations.find((o) => o.driver === cfg.general && o.active) : undefined;
-    const shared = op ? rows.filter((x) => x[cfg.field] === op.id).length : 0;
-    const link = (id: string | null) => updateLib((l) => void ((l[cfg.list] as unknown as Record<string, unknown>[]).find((x) => x.id === r.id)![cfg.field] = id));
-    const own = () =>
+    const setOp = (id: string, fn: (o: Operation) => void) => updateLib((l) => void fn(l.operations.find((o) => o.id === id)!));
+    const create = () =>
       updateLib((l) => {
-        const base = op ?? general;
+        const base = mine[0] ?? general;
         const max = Math.max(0, ...l.operations.map((o) => parseInt(o.code.replace(/\D/g, ""), 10) || 0));
-        const copy: Operation = {
+        l.operations.push({
           ...(base ? structuredClone(base) : { phase: cfg.phase ?? "rosu", category: cfg.category, unit: cfg.unit, rate: 0, timeMin: 0, wallSensitive: false, subactions: [], planStageId: cfg.stage ?? null, dependsOn: [], parallelizable: true, active: true, validFrom: null, validTo: null }),
           id: uid(),
           code: `OP${String(max + 1).padStart(3, "0")}`,
           name: `${cfg.prefix} ${r.name}`,
           driver: cfg.typed,
+          itemIds: [r.id],
           isExample: false,
-        } as Operation;
-        l.operations.push(copy);
-        (l[cfg.list] as unknown as Record<string, unknown>[]).find((x) => x.id === r.id)![cfg.field] = copy.id;
+        } as Operation);
       });
     return (
-      <div className="flex items-center gap-1">
-        <Select
-          className="w-48 text-[12px]"
-          value={op?.id ?? ""}
-          placeholder={general ? `general: ${general.code} · ${general.rate} lei` : "fara pret de executie"}
-          onChange={(v) => link(v || null)}
-          options={lib.operations.filter((o) => o.driver === cfg.typed).map((o) => ({ value: o.id, label: `${o.code} ${o.name}` }))}
-        />
-        {op && (
-          <div className="w-24">
-            <NumberInput value={op.rate} suffix={`lei/${op.unit}`} onChange={(v) => updateLib((l) => void (l.operations.find((o) => o.id === op.id)!.rate = v ?? 0))} />
+      <div className="space-y-1">
+        {mine.map((o) => (
+          <div key={o.id} className="flex items-center gap-1">
+            <span className={`min-w-0 flex-1 truncate text-[12px] ${o.active ? "" : "text-ink-3 line-through"}`} title={`${o.code} ${o.name}${(o.itemIds ?? []).length > 1 ? ` · comuna pentru ${(o.itemIds ?? []).length} elemente` : ""}`}>
+              <span className="font-mono text-[11px] text-ink-2">{o.code}</span> {o.name}
+              {(o.itemIds ?? []).length > 1 && <span className="text-ink-3"> ({(o.itemIds ?? []).length})</span>}
+            </span>
+            <div className="w-24 shrink-0">
+              <NumberInput value={o.rate} suffix={`lei/${o.unit}`} onChange={(v) => setOp(o.id, (x) => void (x.rate = v ?? 0))} />
+            </div>
+            <button className="rounded px-1 text-ink-3 hover:bg-paper hover:text-red-700" title="Scoate elementul din aceasta operatie" onClick={() => setOp(o.id, (x) => void (x.itemIds = (x.itemIds ?? []).filter((i) => i !== r.id)))}>
+              ×
+            </button>
           </div>
-        )}
-        {(!op || shared > 1) && (
-          <button className="whitespace-nowrap rounded border border-line px-1.5 py-1 text-[11px] hover:bg-paper" title={op ? `Tariful este comun pentru ${shared} elemente. Creeaza un pret propriu pentru acesta.` : "Creeaza o operatie cu pret propriu pentru acest element; apare in fila Operatii si tarife."} onClick={own}>
-            pret propriu
+        ))}
+        {mine.length === 0 && <span className="block text-[11px] text-ink-3">{general ? `general: ${general.code} ${general.name} · ${general.rate} lei/${general.unit}` : "fara operatii"}</span>}
+        <div className="flex items-center gap-1">
+          {others.length > 0 && <Select className="w-40 text-[12px]" value="" placeholder="+ operatie existenta" onChange={(v) => v && setOp(v, (x) => void (x.itemIds = [...(x.itemIds ?? []), r.id]))} options={others.map((o) => ({ value: o.id, label: `${o.code} ${o.name}` }))} />}
+          <button className="whitespace-nowrap rounded border border-line px-1.5 py-1 text-[11px] hover:bg-paper" title="Creeaza o operatie noua doar pentru acest element; apare si in fila Operatii si tarife." onClick={create}>
+            + operatie noua
           </button>
-        )}
+        </div>
       </div>
     );
   };
@@ -173,16 +176,33 @@ export default function LibraryPage() {
                 key: "driver",
                 label: "Sursa cantitate (de unde se preia)",
                 type: "custom",
-                width: "270px",
+                width: "420px",
                 render: (r, set) => {
                   const src = operationSource(lib, r);
+                  const all = linkItems(lib, r);
+                  const ids = r.itemIds ?? [];
+                  const rest = all.filter((x) => !ids.includes(x.id));
                   return (
-                    <div className="space-y-0.5">
-                      <Select value={r.driver} onChange={(v) => set({ driver: v })} options={[...(src.linked ? [{ value: r.driver, label: `Din fila ${src.origin}` }] : []), ...GENERAL_SOURCES]} />
+                    <div className="space-y-1">
+                      <Select value={r.driver} onChange={(v) => set({ driver: v, itemIds: v === r.driver ? r.itemIds : [] })} options={[...LINKED_SOURCES, ...GENERAL_SOURCES]} />
                       {src.linked ? (
-                        <button className="block max-w-[260px] truncate text-left text-[11px] text-blue-700 underline" title={src.detail} onClick={() => src.tab && setTab(src.tab)}>
-                          → {src.detail}
-                        </button>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {all.filter((x) => ids.includes(x.id)).map((x) => (
+                            <button key={x.id} className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-900 hover:line-through" title="Scoate din operatie" onClick={() => set({ itemIds: ids.filter((i) => i !== x.id) })}>
+                              {x.name}
+                            </button>
+                          ))}
+                          {ids.length === 0 && <span className="text-[11px] text-red-700">niciun element ales</span>}
+                          {rest.length > 0 && <Select className="w-28 text-[12px]" value="" placeholder="+ adauga" onChange={(v) => v && set({ itemIds: [...ids, v] })} options={rest.map((x) => ({ value: x.id, label: x.name }))} />}
+                          {rest.length > 0 && (
+                            <button className="rounded border border-line px-1.5 py-0.5 text-[11px] hover:bg-paper" onClick={() => set({ itemIds: all.map((x) => x.id) })}>
+                              toate
+                            </button>
+                          )}
+                          <button className="text-[11px] text-blue-700 underline" onClick={() => src.tab && setTab(src.tab)}>
+                            vezi fila
+                          </button>
+                        </div>
                       ) : (
                         <span className="block text-[11px] text-ink-3">{src.origin}</span>
                       )}
@@ -246,7 +266,7 @@ export default function LibraryPage() {
               { key: "breakingCapacityKA", label: "Icn", type: "number", suffix: "kA", width: "80px", nullable: true },
               { key: "modules", label: "Module", type: "number", width: "70px" },
               { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "200px" },
-              { key: "operationId", label: "Pret executie (montaj pe sina)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "protectionDevices", field: "operationId", typed: "protection_type_op", general: "panel_items", prefix: "Montare", category: "tablou", unit: "buc", stage: "ps-tablouri" }) },
+              { key: "operationId", label: "Pret executie (montaj pe sina)", type: "custom", width: "390px", render: (r) => execCell(r, { typed: "protection_type_op", general: "panel_items", prefix: "Montare", category: "tablou", unit: "buc", stage: "ps-tablouri" }) },
             ]}
           />
         </Card>
@@ -266,14 +286,14 @@ export default function LibraryPage() {
               { key: "modulesPerRow", label: "Module / rand", type: "number", width: "100px" },
               { key: "id", label: "Total", type: "custom", width: "70px", render: (r) => <span className="tabular-nums">{r.rows * r.modulesPerRow}</span> },
               { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "220px" },
-              { key: "operationId", label: "Pret executie (montaj cutie)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "enclosureTypes", field: "operationId", typed: "enclosure_type_op", general: "panels", prefix: "Montare", category: "tablou", unit: "tablou", stage: "ps-tablouri" }) },
+              { key: "operationId", label: "Pret executie (montaj cutie)", type: "custom", width: "390px", render: (r) => execCell(r, { typed: "enclosure_type_op", general: "panels", prefix: "Montare", category: "tablou", unit: "tablou", stage: "ps-tablouri" }) },
             ]}
           />
         </Card>
       )}
 
       {tab === "doze" && (
-        <Card title="Tipuri de doze" subtitle="Fiecare tip are materialul (pretul dozei) si operatia de montaj (tariful), deci devizul la rosu apare pe tipuri de doze. Modulele limiteaza aparatajul care incape in doza.">
+        <Card title="Tipuri de doze" subtitle="Fiecare tip de doza are materialul (pretul dozei) si una sau mai multe operatii cu tarif (executare locas, montare ...). O operatie poate fi comuna mai multor tipuri sau proprie unui tip; elementele unei operatii se aleg si din Operatii si tarife → Sursa cantitate.">
           <EditableTable<BoxType>
             rows={lib.boxTypes}
             {...listOps("boxTypes")}
@@ -285,7 +305,7 @@ export default function LibraryPage() {
               { key: "modules", label: "Module", type: "number", width: "75px" },
               { key: "brand", label: "Producator", type: "text", width: "110px" },
               { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "220px" },
-              { key: "operationId", label: "Pret executie (montaj)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "boxTypes", field: "operationId", typed: "box_type_op", prefix: "Montare", category: "doze", unit: "buc", stage: "ps-doze" }) },
+              { key: "operationId", label: "Operatii si tarife pe aceasta doza (locas, montare ...)", type: "custom", width: "390px", render: (r) => execCell(r, { typed: "box_type_op", prefix: "Montare", category: "doze", unit: "buc", stage: "ps-doze" }) },
               {
                 key: "isDefault",
                 label: "Implicit",
@@ -317,7 +337,7 @@ export default function LibraryPage() {
                 { key: "loadedConductors", label: "Incarcate", type: "custom", width: "80px", render: (r, set) => <Select value={String(r.loadedConductors) as "2" | "3"} onChange={(v) => set({ loadedConductors: v === "3" ? 3 : 2 })} options={[{ value: "2", label: "2" }, { value: "3", label: "3" }]} /> },
                 { key: "crossSectionMm2", label: "Sectiune", type: "number", suffix: "mm²", width: "100px" },
                 { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "200px" },
-                { key: "operationId", label: "Pret executie (tragere cablu)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "cableTypes", field: "operationId", typed: "cable_type_op", general: "cable_m", prefix: "Tragere cablu", category: "cablare", unit: "m", stage: "ps-cablare" }) },
+                { key: "operationId", label: "Pret executie (tragere cablu)", type: "custom", width: "390px", render: (r) => execCell(r, { typed: "cable_type_op", general: "cable_m", prefix: "Tragere cablu", category: "cablare", unit: "m", stage: "ps-cablare" }) },
                 { key: "materialQtyPerM", label: "Material / m", type: "number", width: "90px" },
               ]}
             />
@@ -331,7 +351,7 @@ export default function LibraryPage() {
                 { key: "name", label: "Denumire", type: "text" },
                 { key: "diameterMm", label: "Diametru", type: "number", suffix: "mm", width: "100px" },
                 { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "240px" },
-                { key: "operationId", label: "Pret executie (montaj tub)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "conduitTypes", field: "operationId", typed: "conduit_type_op", general: "conduit_m", prefix: "Montare", category: "tuburi", unit: "m", stage: "ps-doze" }) },
+                { key: "operationId", label: "Pret executie (montaj tub)", type: "custom", width: "390px", render: (r) => execCell(r, { typed: "conduit_type_op", general: "conduit_m", prefix: "Montare", category: "tuburi", unit: "m", stage: "ps-doze" }) },
               ]}
             />
           </Card>
@@ -387,8 +407,8 @@ export default function LibraryPage() {
               { key: "needsBox", label: "In doza", type: "checkbox", width: "65px" },
               { key: "suggestedPowerW", label: "Consum mediu", type: "number", suffix: "W", width: "120px", nullable: true },
               { key: "shortcut", label: "Litera", type: "custom", width: "60px", render: (r) => letterInput(r.shortcut ?? "", (v) => setLetter("device", r.id, v)) },
-              { key: "operationId", label: "Pret executie la rosu (punct fara doza)", type: "custom", width: "390px", render: (r) => (r.needsBox ? <span className="text-[11px] text-ink-3">prin doza</span> : execCell(r, { list: "deviceTypes", field: "operationId", typed: "device_type_op", prefix: "Executare punct", category: "doze", unit: "buc", stage: "ps-doze" })) },
-              { key: "installOperationId", label: "Pret executie la gata (montaj)", type: "custom", width: "390px", render: (r) => execCell(r, { list: "deviceTypes", field: "installOperationId", typed: "device_install_op", prefix: "Montare", category: "aparataj", unit: "buc", phase: "gata", stage: "ps-aparataj" }) },
+              { key: "operationId", label: "Pret executie la rosu (punct fara doza)", type: "custom", width: "390px", render: (r) => (r.needsBox ? <span className="text-[11px] text-ink-3">prin doza</span> : execCell(r, { typed: "device_type_op", prefix: "Executare punct", category: "doze", unit: "buc", stage: "ps-doze" })) },
+              { key: "installOperationId", label: "Pret executie la gata (montaj)", type: "custom", width: "390px", render: (r) => execCell(r, { typed: "device_install_op", prefix: "Montare", category: "aparataj", unit: "buc", phase: "gata", stage: "ps-aparataj" }) },
               { key: "materialId", label: "Material (pret)", type: "select", options: matOpts, nullable: true, width: "200px" },
               { key: "threePhase", label: "Trifazat", type: "checkbox", width: "65px" },
               { key: "brand", label: "Producator", type: "text", width: "110px" },

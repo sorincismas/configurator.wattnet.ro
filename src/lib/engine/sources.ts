@@ -3,6 +3,7 @@
  * (metri de sant, numar de circuite ...), fie de la elementele din catalog care
  * au aceasta operatie ca pret de executie (tipuri de doze, aparataj, cabluri ...).
  */
+import { linkItems } from "../library/links";
 import type { Library, Operation, QuantityDriver } from "../model/types";
 
 export type SourceTab = "doze" | "aparate" | "cabluri" | "tablouri" | "protectii";
@@ -13,7 +14,6 @@ export const TAB_LABEL: Record<SourceTab, string> = { doze: "Doze", aparate: "Ap
 export const GENERAL_SOURCES: { value: QuantityDriver; label: string }[] = [
   { value: "manual", label: "Cantitate introdusa manual in deviz" },
   { value: "points_total", label: "Toate punctele (doze + tablouri)" },
-  { value: "box_recesses", label: "Locasuri doze (ingropate)" },
   { value: "boxes_da_all", label: "Doze aparat (toate)" },
   { value: "boxes_da_round", label: "Doze aparat rotunde" },
   { value: "boxes_da_modular", label: "Doze aparat modulare" },
@@ -32,15 +32,18 @@ export const GENERAL_SOURCES: { value: QuantityDriver; label: string }[] = [
   { value: "rooms", label: "Incaperi" },
 ];
 
-const LINKED: Partial<Record<QuantityDriver, { tab: SourceTab; what: string; items: (l: Library, opId: string) => string[] }>> = {
-  box_type_op: { tab: "doze", what: "tipuri de doza", items: (l, id) => l.boxTypes.filter((t) => t.operationId === id).map((t) => t.name) },
-  device_type_op: { tab: "aparate", what: "puncte fara doza (la rosu)", items: (l, id) => l.deviceTypes.filter((t) => t.operationId === id).map((t) => t.name) },
-  device_install_op: { tab: "aparate", what: "aparataj / corpuri (la gata)", items: (l, id) => l.deviceTypes.filter((t) => t.installOperationId === id).map((t) => t.name) },
-  cable_type_op: { tab: "cabluri", what: "tipuri de cablu", items: (l, id) => l.cableTypes.filter((t) => t.operationId === id).map((t) => t.name) },
-  conduit_type_op: { tab: "cabluri", what: "tipuri de tub", items: (l, id) => l.conduitTypes.filter((t) => t.operationId === id).map((t) => t.name) },
-  enclosure_type_op: { tab: "tablouri", what: "cutii de tablou", items: (l, id) => l.enclosureTypes.filter((t) => t.operationId === id).map((t) => t.name) },
-  protection_type_op: { tab: "protectii", what: "aparate de tablou", items: (l, id) => l.protectionDevices.filter((t) => t.operationId === id).map((t) => t.name) },
+const LINKED: Partial<Record<QuantityDriver, { tab: SourceTab; what: string; label: string }>> = {
+  box_type_op: { tab: "doze", what: "tipuri de doza", label: "Din fila Doze" },
+  device_type_op: { tab: "aparate", what: "puncte fara doza (la rosu)", label: "Din fila Aparate: punct fara doza (la rosu)" },
+  device_install_op: { tab: "aparate", what: "aparataj / corpuri (la gata)", label: "Din fila Aparate: montaj (la gata)" },
+  cable_type_op: { tab: "cabluri", what: "tipuri de cablu", label: "Din fila Cabluri (metri)" },
+  conduit_type_op: { tab: "cabluri", what: "tipuri de tub", label: "Din fila Cabluri si copex: tuburi (metri)" },
+  enclosure_type_op: { tab: "tablouri", what: "cutii de tablou", label: "Din fila Cutii tablou" },
+  protection_type_op: { tab: "protectii", what: "aparate de tablou", label: "Din fila Aparate tablou" },
 };
+
+/** sursele legate de o fila din biblioteca: operatia isi alege elementele la care se aplica */
+export const LINKED_SOURCES = (Object.keys(LINKED) as QuantityDriver[]).map((value) => ({ value, label: LINKED[value]!.label }));
 
 export const isLinkedDriver = (d: QuantityDriver) => d in LINKED;
 
@@ -54,18 +57,19 @@ export interface OperationSource {
   items: string[];
 }
 
-export function operationSource(lib: Library, op: Pick<Operation, "id" | "driver">): OperationSource {
+export function operationSource(lib: Library, op: Pick<Operation, "id" | "driver" | "itemIds">): OperationSource {
   const k = LINKED[op.driver];
   if (k) {
-    const items = k.items(lib, op.id);
-    return { linked: true, tab: k.tab, origin: TAB_LABEL[k.tab], detail: items.length ? items.join(", ") : `niciun element legat (${k.what})`, items };
+    const ids = new Set(op.itemIds ?? []);
+    const items = linkItems(lib, op).filter((x) => ids.has(x.id)).map((x) => x.name);
+    return { linked: true, tab: k.tab, origin: TAB_LABEL[k.tab], detail: items.length ? items.join(", ") : `niciun element ales (${k.what})`, items };
   }
   const g = GENERAL_SOURCES.find((x) => x.value === op.driver);
   return { linked: false, tab: null, origin: op.driver === "manual" ? "Manual" : "Calcul din proiect", detail: g?.label ?? op.driver, items: [] };
 }
 
 /** textul scurt afisat in deviz sub operatie */
-export function sourceText(lib: Library, op: Pick<Operation, "id" | "driver">): string {
+export function sourceText(lib: Library, op: Pick<Operation, "id" | "driver" | "itemIds">): string {
   const s = operationSource(lib, op);
   if (!s.linked) return s.detail;
   const short = s.items.length > 3 ? `${s.items.slice(0, 3).join(", ")} +${s.items.length - 3}` : s.detail;

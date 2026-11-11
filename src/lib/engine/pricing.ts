@@ -4,6 +4,7 @@
  * Factorii de dificultate sunt expliciti in fiecare alocare (cap. 10.3).
  */
 import type { DifficultyFactor, Library, Operation, Project, QuantityDriver, Room } from "../model/types";
+import { opsForItem } from "../library/links";
 import {
   cableLength,
   circuitCableLength,
@@ -117,9 +118,8 @@ export function inScope(p: Project, scope: ResolvedScope, id: string, roomId: st
 
 /** cantitatile brute pe incaperi, pentru un driver */
 /** operatia proprie a unui tip din catalog, daca exista si este activa */
-export function ownOp(lib: Library, item: { operationId?: string | null } | undefined): string | null {
-  const id = item?.operationId;
-  return id && lib.operations.some((o) => o.id === id && o.active) ? id : null;
+export function hasOwnOp(lib: Library, driver: QuantityDriver, itemId: string | null | undefined): boolean {
+  return opsForItem(lib, driver, itemId).length > 0;
 }
 
 export function allocationsFor(p: Project, driver: QuantityDriver, scope: ResolvedScope | null = null, operationId: string | null = null): Allocation[] {
@@ -127,7 +127,10 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
   const wallOf = (roomId: string | null) => (roomId ? rooms.get(roomId)?.wallTypeId ?? null : null);
   const typed = driver.endsWith("_type_op");
   /** elementul apartine acestei operatii? (operatia proprie a tipului, sau cea generala cand tipul nu are una) */
-  const mine = (own: string | null) => (typed ? own === operationId : own === null);
+  const itemIds = new Set(p.library.operations.find((o) => o.id === operationId)?.itemIds ?? []);
+  const TYPED_OF: Partial<Record<QuantityDriver, QuantityDriver>> = { cable_m: "cable_type_op", conduit_m: "conduit_type_op", panels: "enclosure_type_op", panel_items: "protection_type_op" };
+  /** elementul apartine acestei operatii? (operatie legata: tipul este in lista ei; operatie generala: tipul nu are nicio operatie proprie) */
+  const mine = (typeId: string | null | undefined) => (typed ? !!typeId && itemIds.has(typeId) : !hasOwnOp(p.library, TYPED_OF[driver] ?? driver, typeId));
   const groupByRoom = (items: { roomId: string | null; id: string; qty?: number; wallTypeId?: string | null }[]): Allocation[] => {
     const m = new Map<string, Allocation>();
     for (const it of items) {
@@ -154,18 +157,17 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
     case "boxes_da_all":
       return groupByRoom(p.boxes.filter((b) => b.kind === "DA").map((b) => ({ roomId: b.roomId, id: b.id })));
     case "box_type_op": {
-      const types = new Set(p.library.boxTypes.filter((t) => t.operationId === operationId).map((t) => t.id));
-      // doze fara tip ales: montajul implicit dupa fel (DA / DD)
-      const fallback = (b: { kind: string }) => (b.kind === "DD" ? "op-doza-dd" : "op-doza-rot");
-      return groupByRoom(p.boxes.filter((b) => (b.boxTypeId && p.library.boxTypes.some((t) => t.id === b.boxTypeId) ? types.has(b.boxTypeId) : fallback(b) === operationId)).map((b) => ({ roomId: b.roomId, id: b.id })));
+      // doze fara tip ales: locasul si montajul implicit dupa fel (DA / DD)
+      const fallback = (b: { kind: string }) => operationId === "op-locas" || operationId === (b.kind === "DD" ? "op-doza-dd" : "op-doza-rot");
+      return groupByRoom(p.boxes.filter((b) => (b.boxTypeId && p.library.boxTypes.some((t) => t.id === b.boxTypeId) ? itemIds.has(b.boxTypeId) : fallback(b))).map((b) => ({ roomId: b.roomId, id: b.id })));
     }
     case "device_type_op": {
-      const types = new Set(p.library.deviceTypes.filter((t) => t.operationId === operationId).map((t) => t.id));
+      const types = itemIds;
       return groupByRoom(p.devices.filter((d) => !d.boxId && d.deviceTypeId && types.has(d.deviceTypeId)).map((d) => ({ roomId: d.roomId, id: d.id })));
     }
     case "device_install_op": {
       // faza la gata: aparatele puse efectiv (nu rezervarile dozelor fara aparataj)
-      const types = new Set(p.library.deviceTypes.filter((t) => t.installOperationId === operationId).map((t) => t.id));
+      const types = itemIds;
       return groupByRoom(p.devices.filter((d) => !d.placeholder && d.deviceTypeId && types.has(d.deviceTypeId)).map((d) => ({ roomId: d.roomId, id: d.id })));
     }
     case "boxes_dd":
@@ -203,7 +205,7 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
     case "conduit_type_op":
       if (usesEstimatedRoutes(p)) {
         if (p.fast?.noConduit) return [];
-        if (!mine(ownOp(p.library, p.library.conduitTypes.find((t) => t.id === "cd-20") ?? p.library.conduitTypes[0]))) return [];
+        if (!mine((p.library.conduitTypes.find((t) => t.id === "cd-20") ?? p.library.conduitTypes[0])?.id)) return [];
         return groupByRoom(
           p.circuits
             .filter((c) => !c.existing)
@@ -213,7 +215,7 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
       }
       return groupByRoom(
         p.routes.flatMap((r) =>
-          r.conduits.filter((c) => mine(ownOp(p.library, p.library.conduitTypes.find((t) => t.id === c.conduitTypeId)))).map((c) => ({ roomId: r.roomIds[0] ?? null, id: c.id, qty: conduitLength(r, c).value ?? 0 })),
+          r.conduits.filter((c) => mine(c.conduitTypeId)).map((c) => ({ roomId: r.roomIds[0] ?? null, id: c.id, qty: conduitLength(r, c).value ?? 0 })),
         ),
       );
     case "end_points":
@@ -232,7 +234,7 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
     case "cable_type_op":
       return groupByRoom(
         p.circuits
-          .filter((c) => !c.existing && mine(ownOp(p.library, p.library.cableTypes.find((t) => t.id === c.cableTypeId))))
+          .filter((c) => !c.existing && mine(c.cableTypeId))
           .map((c) => {
             const firstDevice = p.devices.find((d) => d.circuitId === c.id);
             return { roomId: firstDevice?.roomId ?? null, id: c.id, qty: circuitCableLength(p, c).value ?? 0 };
@@ -242,12 +244,12 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
     case "enclosure_type_op":
       // tablou existent: nu se monteaza cutie noua
       if (p.fast?.panelMode === "existent") return [];
-      return groupByRoom(p.panels.filter((t) => mine(ownOp(p.library, p.library.enclosureTypes.find((e) => e.id === t.enclosureTypeId)))).map((t) => ({ roomId: t.roomId, id: t.id })));
+      return groupByRoom(p.panels.filter((t) => mine(t.enclosureTypeId)).map((t) => ({ roomId: t.roomId, id: t.id })));
     case "panel_items":
     case "protection_type_op":
       return groupByRoom(
         p.panels.flatMap((t) =>
-          t.items.filter((i) => !i.isSpare && mine(ownOp(p.library, p.library.protectionDevices.find((d) => d.id === i.protectionDeviceId)))).map((i) => ({ roomId: t.roomId, id: i.id })),
+          t.items.filter((i) => !i.isSpare && mine(i.protectionDeviceId)).map((i) => ({ roomId: t.roomId, id: i.id })),
         ),
       );
     case "circuits":
