@@ -8,6 +8,7 @@ import { QuoteDoc } from "@/components/quote/QuoteDoc";
 import { Badge, Button, Card, Checkbox, ConfirmButton, Field, NumberInput, PageHeader, Select, Table, Tabs, TextArea, TextInput, cx } from "@/components/ui";
 import { computeLabor, resolveScope, SCOPE_PRESET_CATEGORIES, type LaborLine } from "@/lib/engine/pricing";
 import { assignProformaNumber, buildDocument, categoryTitle, defaultProforma, subtotals, topDrivers, type DocDetail, type DocKind, type GroupBy } from "@/lib/engine/quote";
+import { sourceText } from "@/lib/engine/sources";
 import { fmtHours, fmtMoney, fmtNum, NA } from "@/lib/format";
 import { printElement } from "@/lib/io/svg";
 import { uid } from "@/lib/model/ids";
@@ -232,7 +233,9 @@ function LinesCard({ p, up, lines }: { p: Project; up: Up; lines: LaborLine[] })
                   <td className="font-mono text-xs">{l.operation.code}</td>
                   <td className="min-w-56">
                     {l.operation.name} {l.operation.isExample && <Badge tone="warn">exemplu</Badge>}
-                    <div className="text-[10px] text-ink-3">{categoryTitle(l.operation.category)}</div>
+                    <div className="text-[10px] text-ink-3">
+                      {categoryTitle(l.operation.category)} · <span title="de unde se preia cantitatea">{sourceText(p.library, l.operation)}</span>
+                    </div>
                   </td>
                   <td className="w-28">
                     <NumberInput value={o?.quantityOverride ?? null} placeholder={fmtNum(calcQty, 2)} onChange={(v) => up((x) => setOverride(x, l.operation.id, { quantityOverride: v }))} />

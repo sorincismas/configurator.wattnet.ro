@@ -116,9 +116,18 @@ export function inScope(p: Project, scope: ResolvedScope, id: string, roomId: st
 }
 
 /** cantitatile brute pe incaperi, pentru un driver */
+/** operatia proprie a unui tip din catalog, daca exista si este activa */
+export function ownOp(lib: Library, item: { operationId?: string | null } | undefined): string | null {
+  const id = item?.operationId;
+  return id && lib.operations.some((o) => o.id === id && o.active) ? id : null;
+}
+
 export function allocationsFor(p: Project, driver: QuantityDriver, scope: ResolvedScope | null = null, operationId: string | null = null): Allocation[] {
   const rooms = roomById(p);
   const wallOf = (roomId: string | null) => (roomId ? rooms.get(roomId)?.wallTypeId ?? null : null);
+  const typed = driver.endsWith("_type_op");
+  /** elementul apartine acestei operatii? (operatia proprie a tipului, sau cea generala cand tipul nu are una) */
+  const mine = (own: string | null) => (typed ? own === operationId : own === null);
   const groupByRoom = (items: { roomId: string | null; id: string; qty?: number; wallTypeId?: string | null }[]): Allocation[] => {
     const m = new Map<string, Allocation>();
     for (const it of items) {
@@ -191,8 +200,10 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
           })),
       );
     case "conduit_m":
+    case "conduit_type_op":
       if (usesEstimatedRoutes(p)) {
         if (p.fast?.noConduit) return [];
+        if (!mine(ownOp(p.library, p.library.conduitTypes.find((t) => t.id === "cd-20") ?? p.library.conduitTypes[0]))) return [];
         return groupByRoom(
           p.circuits
             .filter((c) => !c.existing)
@@ -200,7 +211,11 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
             .filter((x) => x.qty > 0),
         );
       }
-      return groupByRoom(p.routes.flatMap((r) => r.conduits.map((c) => ({ roomId: r.roomIds[0] ?? null, id: c.id, qty: conduitLength(r, c).value ?? 0 }))));
+      return groupByRoom(
+        p.routes.flatMap((r) =>
+          r.conduits.filter((c) => mine(ownOp(p.library, p.library.conduitTypes.find((t) => t.id === c.conduitTypeId)))).map((c) => ({ roomId: r.roomIds[0] ?? null, id: c.id, qty: conduitLength(r, c).value ?? 0 })),
+        ),
+      );
     case "end_points":
       return groupByRoom([
         ...p.boxes.filter((b) => b.kind === "DA" && p.devices.some((d) => d.boxId === b.id && d.category !== "curenti_slabi")).map((b) => ({ roomId: b.roomId, id: b.id })),
@@ -212,19 +227,29 @@ export function allocationsFor(p: Project, driver: QuantityDriver, scope: Resolv
       );
     case "existing_circuits":
       return groupByRoom(p.circuits.filter((c) => c.existing).map((c) => ({ roomId: p.panels.find((t) => t.id === c.panelId)?.roomId ?? null, id: c.id })));
+    // elementele al caror tip are operatie proprie se numara la acea operatie, nu la cea generala
     case "cable_m":
+    case "cable_type_op":
       return groupByRoom(
-        p.circuits.filter((c) => !c.existing).map((c) => {
-          const firstDevice = p.devices.find((d) => d.circuitId === c.id);
-          return { roomId: firstDevice?.roomId ?? null, id: c.id, qty: circuitCableLength(p, c).value ?? 0 };
-        }),
+        p.circuits
+          .filter((c) => !c.existing && mine(ownOp(p.library, p.library.cableTypes.find((t) => t.id === c.cableTypeId))))
+          .map((c) => {
+            const firstDevice = p.devices.find((d) => d.circuitId === c.id);
+            return { roomId: firstDevice?.roomId ?? null, id: c.id, qty: circuitCableLength(p, c).value ?? 0 };
+          }),
       );
     case "panels":
+    case "enclosure_type_op":
       // tablou existent: nu se monteaza cutie noua
       if (p.fast?.panelMode === "existent") return [];
-      return groupByRoom(p.panels.map((t) => ({ roomId: t.roomId, id: t.id })));
+      return groupByRoom(p.panels.filter((t) => mine(ownOp(p.library, p.library.enclosureTypes.find((e) => e.id === t.enclosureTypeId)))).map((t) => ({ roomId: t.roomId, id: t.id })));
     case "panel_items":
-      return groupByRoom(p.panels.flatMap((t) => t.items.filter((i) => !i.isSpare).map((i) => ({ roomId: t.roomId, id: i.id }))));
+    case "protection_type_op":
+      return groupByRoom(
+        p.panels.flatMap((t) =>
+          t.items.filter((i) => !i.isSpare && mine(ownOp(p.library, p.library.protectionDevices.find((d) => d.id === i.protectionDeviceId)))).map((i) => ({ roomId: t.roomId, id: i.id })),
+        ),
+      );
     case "circuits":
       return groupByRoom(
         p.circuits

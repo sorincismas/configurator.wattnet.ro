@@ -313,3 +313,24 @@ describe("faza la gata", () => {
     expect(m.planStages.some((s) => s.id === "ps-aparataj")).toBe(true);
   });
 });
+
+describe("pret de executie propriu pe elemente din catalog", () => {
+  it("cablul cu operatie proprie se numara la ea, restul raman la operatia generala; totalul de metri nu se dubleaza", async () => {
+    const { operationSource, sourceText } = await import("@/lib/engine/sources");
+    const p = setup();
+    applyQuickItems(p, room(p, "Living").id, parseQuickCode(p.library, "3P 2L").items);
+    generateCircuits(p);
+    const q = (id: string) => computeLabor(p).lines.find((l) => l.operation.id === id)?.quantity ?? 0;
+    const total = q("op-cablu");
+    expect(total).toBeGreaterThan(0);
+    const base = p.library.operations.find((o) => o.id === "op-cablu")!;
+    p.library.operations.push({ ...structuredClone(base), id: "op-own", code: "OP900", name: "Tragere cablu NYY-J 3x2,5", driver: "cable_type_op", rate: 4 });
+    p.library.cableTypes.find((t) => t.id === "ct-nyyj3x25")!.operationId = "op-own";
+    expect(q("op-own")).toBeGreaterThan(0);
+    expect(q("op-own") + q("op-cablu")).toBeCloseTo(total, 3);
+    const src = operationSource(p.library, p.library.operations.find((o) => o.id === "op-own")!);
+    expect(src).toMatchObject({ linked: true, tab: "cabluri", items: ["NYY-J 3x2,5"] });
+    expect(sourceText(p.library, base)).toContain("Metri cablu");
+    expect(operationSource(p.library, p.library.operations.find((o) => o.id === "op-doza-rot")!).origin).toBe("Doze");
+  });
+});
