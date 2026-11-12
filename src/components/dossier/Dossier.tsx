@@ -168,7 +168,7 @@ export const Dossier = forwardRef<HTMLDivElement, { p: Project; chapters: number
           ) : (
             <table className={T}>
               <thead>
-                <tr><th className={TH}>Cod</th><th className={TH}>Incapere</th><th className={TH}>Nivel</th><th className={TH}>L x l x H (m)</th><th className={TH}>S (m²)</th><th className={TH}>P (m)</th><th className={TH}>Perete</th><th className={TH}>DA</th><th className={TH}>DD</th><th className={TH}>Aparate</th></tr>
+                <tr><th className={TH}>Cod</th><th className={TH}>Incapere</th><th className={TH}>Nivel</th><th className={TH}>L x l x H (m)</th><th className={TH}>S (m²)</th><th className={TH}>P (m)</th><th className={TH}>Perete</th><th className={TH}>DA</th><th className={TH}>DD</th></tr>
               </thead>
               <tbody>
                 {p.rooms.map((r) => (
@@ -182,7 +182,6 @@ export const Dossier = forwardRef<HTMLDivElement, { p: Project; chapters: number
                     <td className={TD}>{p.library.wallTypes.find((w) => w.id === r.wallTypeId)?.name ?? "—"}</td>
                     <td className={TDN}>{p.boxes.filter((b) => b.roomId === r.id && b.kind === "DA").length}</td>
                     <td className={TDN}>{p.boxes.filter((b) => b.roomId === r.id && b.kind === "DD").length}</td>
-                    <td className={TDN}>{p.devices.filter((d) => d.roomId === r.id && !d.placeholder).length}</td>
                   </tr>
                 ))}
                 <tr className="font-bold">
@@ -191,7 +190,6 @@ export const Dossier = forwardRef<HTMLDivElement, { p: Project; chapters: number
                   <td className={TD} colSpan={2} />
                   <td className={TDN}>{s.counts.boxesDA}</td>
                   <td className={TDN}>{s.counts.boxesDD}</td>
-                  <td className={TDN}>{p.devices.filter((d) => !d.placeholder).length}</td>
                 </tr>
               </tbody>
             </table>
@@ -531,7 +529,6 @@ export const Dossier = forwardRef<HTMLDivElement, { p: Project; chapters: number
               {doc.totals.materialsSubtotal !== null && <tr><td className={TD}>Materiale</td><td className={TDN}>{fmtMoney(doc.totals.materialsSubtotal, cur)}</td></tr>}
               <tr><td className={TD}>{doc.totals.vatPayer ? `TVA ${doc.totals.vatRatePct}%` : f.vatNote}</td><td className={TDN}>{doc.totals.vatPayer ? fmtMoney(doc.totals.vat, cur) : "—"}</td></tr>
               <tr className="font-bold"><td className={TD}>TOTAL</td><td className={TDN}>{fmtMoney(doc.totals.gross, cur)}</td></tr>
-              <tr><td className={TD}>Timp manopera / tarif orar implicit</td><td className={TDN}>{fmtNum(doc.hours, 1)} h / {s.labor.impliedHourlyRate === null ? NA : fmtNum(s.labor.impliedHourlyRate, 0) + " lei/h"}</td></tr>
             </tbody>
           </table>
         </Page>
