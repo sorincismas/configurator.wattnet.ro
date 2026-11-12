@@ -7,7 +7,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { RequireProject } from "@/components/shell/AppShell";
-import { DEVICE_COLOR } from "@/components/shell/theme";
+import { BOX_COLOR, DEVICE_COLOR } from "@/components/shell/theme";
 import { Badge, Button, Checkbox, ConfirmButton, Field, NumberInput, Select, Tabs, TextInput, cx } from "@/components/ui";
 import { allCircuitLoads, generateCircuits, moveDevice, type CircuitLoad } from "@/lib/engine/circuits";
 import { autoCircuitLength, chaseLength, circuitEndPoints, circuitLimitPoints, totalCableLength, totalConduitLength, usesEstimatedRoutes } from "@/lib/engine/measure";
@@ -16,6 +16,7 @@ import { applySizing, proposeSizing } from "@/lib/engine/sizing";
 import {
   addBoxes,
   addDeviceToBox,
+  addJunctionBoxes,
   fillDefaultDevices,
   addPoints,
   applyQuickItems,
@@ -37,7 +38,7 @@ import {
   setBoxPurpose,
   type PointFunction,
 } from "@/lib/engine/points";
-import { moveInChain, resolveChain, setLinkLength } from "@/lib/engine/chain";
+import { circuitsThroughBox, moveInChain, resolveChain, setCircuitThroughBox, setLinkLength } from "@/lib/engine/chain";
 import { fmtNum, NA } from "@/lib/format";
 import { newBuilding, newLevel, newRoom, tracked } from "@/lib/model/factory";
 import type { Circuit, Device, DeviceCategory, Project } from "@/lib/model/types";
@@ -46,15 +47,15 @@ import { createDefaultLibrary } from "@/lib/library/default-library";
 
 type Up = ReturnType<typeof useUpdateActive>;
 
-const FN_CATEGORY: Record<PointFunction, DeviceCategory> = { P: "priza", L: "iluminat", I: "intrerupator", D: "consumator_dedicat", S: "curenti_slabi", C: "comanda", A: "altul" };
-const fnColor = (f: PointFunction) => DEVICE_COLOR[FN_CATEGORY[f]];
+const FN_CATEGORY: Record<Exclude<PointFunction, "J">, DeviceCategory> = { P: "priza", L: "iluminat", I: "intrerupator", D: "consumator_dedicat", S: "curenti_slabi", C: "comanda", A: "altul" };
+const fnColor = (f: PointFunction) => (f === "J" ? BOX_COLOR.DD : DEVICE_COLOR[FN_CATEGORY[f]]);
 const usageColor = (u: Circuit["usage"]) => DEVICE_COLOR[u === "prize" ? "priza" : u === "iluminat" ? "iluminat" : u === "dedicat" ? "consumator_dedicat" : u === "curenti_slabi" ? "curenti_slabi" : "altul"];
 
 function FnBadge({ f, size = "sm" }: { f: PointFunction; size?: "sm" | "md" }) {
   const c = fnColor(f);
   return (
-    <span className={cx("inline-flex shrink-0 items-center justify-center rounded font-bold", size === "sm" ? "h-5 w-5 text-[11px]" : "h-7 w-7 text-sm")} style={{ background: c.c, color: "#fff" }} title={FUNCTION_LABEL[f]}>
-      {f}
+    <span className={cx("inline-flex shrink-0 items-center justify-center rounded font-bold", size === "sm" ? (f === "J" ? "h-5 w-6 text-[9.5px]" : "h-5 w-5 text-[11px]") : "h-7 w-7 text-sm")} style={{ background: c.c, color: "#fff" }} title={FUNCTION_LABEL[f]}>
+      {f === "J" ? "DD" : f}
     </span>
   );
 }
@@ -72,7 +73,7 @@ function CircuitChip({ p, id }: { p: Project; id: string | null }) {
 }
 
 function FnCounts({ stats }: { stats: { byFunction: Partial<Record<PointFunction, number>> } }) {
-  const order: PointFunction[] = ["P", "L", "I", "D", "S", "C", "A"];
+  const order: PointFunction[] = ["P", "L", "I", "D", "S", "C", "A", "J"];
   return (
     <span className="flex flex-wrap gap-1">
       {order
@@ -82,7 +83,7 @@ function FnCounts({ stats }: { stats: { byFunction: Partial<Record<PointFunction
           return (
             <span key={f} className="rounded px-1 text-[10.5px] font-semibold" style={{ background: c.bg, color: c.c }}>
               {stats.byFunction[f]}
-              {f}
+              {f === "J" ? "DD" : f}
             </span>
           );
         })}
@@ -260,11 +261,11 @@ function PointsBrowser({ p }: { p: Project }) {
           <>
             <span className="text-ink-3">›</span>
             <span className="flex items-center gap-1.5 px-1.5 font-semibold">
-              <FnBadge f={selCat ? FUNCTION_OF[selCat] : "A"} />
+              <FnBadge f={selCat ? FUNCTION_OF[selCat] : selBox?.kind === "DD" ? "J" : "A"} />
               {selBox ? `${selBox.code} · ${p.library.boxTypes.find((t) => t.id === selBox.boxTypeId)?.name ?? "doza"}` : `${selDev!.code} · ${selDev!.label}`}
             </span>
             <span className="ml-auto">
-              <CircuitChip p={p} id={selCircuit} />
+              {!(selBox?.kind === "DD" && !selCat) && <CircuitChip p={p} id={selCircuit} />}
             </span>
           </>
         )}
@@ -347,6 +348,10 @@ function roomItemStats(p: Project, roomId: string): ItemStats {
   const inc = (f: PointFunction) => (byFunction[f] = (byFunction[f] ?? 0) + 1);
   for (const b of p.boxes.filter((x) => x.roomId === roomId)) {
     const cat = boxCategory(p, b.id);
+    if (b.kind === "DD" && !cat) {
+      inc("J");
+      continue;
+    }
     inc(cat ? FUNCTION_OF[cat] : "A");
     if (cat && cat !== "curenti_slabi" && !boxCircuitId(p, b.id)) unassigned++;
   }
@@ -380,6 +385,7 @@ function RoomItems({ p, up, roomId, selected, onSelect }: { p: Project; up: Up; 
   const lib = p.library;
   const purposes = lib.pointPurposes;
   const lights = lib.deviceTypes.filter((t) => t.category === "iluminat");
+  const ddTypes = lib.boxTypes.filter((t) => t.kind === "DD");
   const updateLibrary = useApp((a) => a.updateLibrary);
   const restorePurposes = () => updateLibrary((l) => void (l.pointPurposes = structuredClone(createDefaultLibrary().pointPurposes)));
   const [code, setCode] = useState("");
@@ -398,7 +404,7 @@ function RoomItems({ p, up, roomId, selected, onSelect }: { p: Project; up: Up; 
 
   const boxes = p.boxes.filter((b) => b.roomId === roomId);
   const points = p.devices.filter((d) => d.roomId === roomId && !d.boxId);
-  const order = "PDICERSLA";
+  const order = "PDICERSLAJ";
   const rows = [
     ...boxes.map((b) => {
       const cat = boxCategory(p, b.id);
@@ -406,13 +412,13 @@ function RoomItems({ p, up, roomId, selected, onSelect }: { p: Project; up: Up; 
       const cap = boxCapacity(p, b.id);
       return {
         id: b.id,
-        f: (cat ? FUNCTION_OF[cat] : "A") as PointFunction,
+        f: (b.kind === "DD" && !cat ? "J" : cat ? FUNCTION_OF[cat] : "A") as PointFunction,
         code: b.code,
         title: btName(b.boxTypeId),
-        sub: real.length ? `${real.map((d) => d.label).join(" + ")} · ${cap.used}/${cap.modules} mod.` : cat ? FUNCTION_LABEL[FUNCTION_OF[cat]] + " · fara aparataj" : "goala",
+        sub: b.kind === "DD" && !cat ? `doza derivatie · ${circuitsThroughBox(p, b.id).map((c) => c.code).join(", ") || "niciun circuit"}` : real.length ? `${real.map((d) => d.label).join(" + ")} · ${cap.used}/${cap.modules} mod.` : cat ? FUNCTION_LABEL[FUNCTION_OF[cat]] + " · fara aparataj" : "goala",
         power: boxDevices(p, b.id).reduce((s, d) => s + (d.powerW.value ?? 0), 0),
         circuitId: boxCircuitId(p, b.id),
-        slabi: cat === "curenti_slabi",
+        slabi: cat === "curenti_slabi" || (b.kind === "DD" && !cat),
       };
     }),
     ...points.map((d) => ({ id: d.id, f: pointFunction(d), code: d.code, title: d.label, sub: "punct fara doza", power: d.powerW.value ?? 0, circuitId: d.circuitId, slabi: d.category === "curenti_slabi" })),
@@ -438,6 +444,16 @@ function RoomItems({ p, up, roomId, selected, onSelect }: { p: Project; up: Up; 
             <QuickButton key={x.id} letter={x.shortcut || "·"} label={x.name.replace(/^Doza /, "")} sub={btName(boxType || x.boxTypeId)} color={DEVICE_COLOR[x.category]} onClick={() => addBox(x.id)} title={`Adauga ${x.name} (litera ${x.shortcut})`} />
           ))}
         </div>
+        {ddTypes.length > 0 && (
+          <>
+            <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Doze de derivatie (DD)</p>
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+              {ddTypes.map((t) => (
+                <QuickButton key={t.id} letter="DD" label={t.name.replace(/^Doza derivatie /, "")} color={BOX_COLOR.DD} onClick={() => up((x) => void addJunctionBoxes(x, roomId, t.id, 1), `${t.name} in ${roomName}`)} title={`Adauga ${t.name}`} />
+              ))}
+            </div>
+          </>
+        )}
         <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wide text-ink-2">Puncte de iluminat</p>
         {lights.length === 0 && <p className="text-[12px] text-amber-800">Biblioteca nu are tipuri de iluminat (Biblioteca → Aparate, categoria iluminat).</p>}
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -478,7 +494,7 @@ function RoomItems({ p, up, roomId, selected, onSelect }: { p: Project; up: Up; 
                   <span className="block truncate text-[11px] text-ink-3">{r.sub}</span>
                 </span>
                 <span className="hidden w-14 text-right text-[12px] tabular-nums text-ink-2 sm:block">{r.power ? `${fmtNum(r.power, 0)} W` : ""}</span>
-                {r.slabi ? <span className="text-[11px] text-ink-3">curenti slabi</span> : <CircuitChip p={p} id={r.circuitId} />}
+                {r.slabi ? <span className="text-[11px] text-ink-3">{r.f === "J" ? "" : "curenti slabi"}</span> : <CircuitChip p={p} id={r.circuitId} />}
               </button>
             </li>
           ))}
@@ -524,6 +540,43 @@ function BoxDetail({ p, up, boxId, onDeleted }: { p: Project; up: Up; boxId: str
   const candidates = lib.deviceTypes.filter((t) => t.needsBox || t.category !== "iluminat");
   const fitsType = (t: (typeof candidates)[number]) => box.modules === 0 || t.modules <= cap.free;
   const setDev = (id: string, fn: (x: Device) => void) => up((x) => { const t = x.devices.find((y) => y.id === id); if (t) fn(t); });
+
+  if (box.kind === "DD" && devs.length === 0) {
+    const through = circuitsThroughBox(p, boxId);
+    return (
+      <div className="space-y-3 px-1 py-1">
+        <Field label="Tip doza derivatie">
+          <Select
+            value={box.boxTypeId ?? ""}
+            onChange={(v) => up((x) => void (x.boxes.find((y) => y.id === boxId)!.boxTypeId = v), `Tip doza ${box.code}`)}
+            options={lib.boxTypes.filter((t) => t.kind === "DD").map((t) => ({ value: t.id, label: t.name }))}
+          />
+        </Field>
+        <div className="rounded-md border border-line p-2">
+          <p className="mb-1 text-[12px] font-semibold">Circuite care trec prin doza</p>
+          {p.circuits.length === 0 ? (
+            <p className="text-[12px] text-ink-3">Niciun circuit inca. Imparte dozele pe circuite, apoi bifeaza aici.</p>
+          ) : (
+            <div className="space-y-1">
+              {p.circuits.map((c) => (
+                <Checkbox key={c.id} checked={through.includes(c)} onChange={(v) => up((x) => setCircuitThroughBox(x, c.id, boxId, v), `${box.code} pe ${c.code}`)} label={`${c.code} ${c.name}`} />
+              ))}
+            </div>
+          )}
+          <p className="mt-1 text-[11px] text-ink-3">Doza intra in traseul circuitului (fila Circuite), unde ii stabilesti pozitia in lant si metrii.</p>
+        </div>
+        <Field label="Pozitie / observatii">
+          <TextInput value={box.position} onChange={(v) => up((x) => void (x.boxes.find((y) => y.id === boxId)!.position = v))} placeholder="perete, inaltime, deasupra usii" />
+        </Field>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button onClick={() => box.boxTypeId && up((x) => void addJunctionBoxes(x, box.roomId, box.boxTypeId!, 1), "Doza derivatie duplicata")}>+ Inca una la fel</Button>
+          <ConfirmButton size="md" onConfirm={() => { up((x) => removeBox(x, boxId), `Doza ${box.code} stearsa`); onDeleted(); }}>
+            Sterge doza
+          </ConfirmButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3 px-1 py-1">
@@ -770,6 +823,7 @@ function ChainEditor({ p, up, c }: { p: Project; up: Up; c: Circuit }) {
   const fnOf = (l: (typeof links)[number]) => {
     if (l.kind === "doza") {
       const cat = boxCategory(p, l.memberId);
+      if (!cat && p.boxes.find((b) => b.id === l.memberId)?.kind === "DD") return "J" as PointFunction;
       return (cat ? FUNCTION_OF[cat] : "A") as PointFunction;
     }
     const d = p.devices.find((x) => x.id === l.memberId);

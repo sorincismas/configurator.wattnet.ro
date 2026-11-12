@@ -37,6 +37,11 @@ export function chainMembers(p: Project, c: Circuit): ChainMember[] {
       if (b && !out.has(b.id)) out.set(b.id, { memberId: b.id, kind: "doza", code: b.code, roomId: b.roomId });
     } else if (!out.has(d.id)) out.set(d.id, { memberId: d.id, kind: "punct", code: d.code, roomId: d.roomId });
   }
+  // dozele de derivatie prin care trece circuitul (adaugate explicit in lant)
+  for (const l of c.chain ?? []) {
+    const b = p.boxes.find((x) => x.id === l.memberId && x.kind === "DD");
+    if (b && !out.has(b.id)) out.set(b.id, { memberId: b.id, kind: "doza", code: b.code, roomId: b.roomId });
+  }
   return [...out.values()].sort((a, b) => (roomIdx.get(a.roomId) ?? 0) - (roomIdx.get(b.roomId) ?? 0) || a.code.localeCompare(b.code));
 }
 
@@ -64,6 +69,18 @@ export function chainLength(p: Project, c: Circuit): { value: number; measured: 
 }
 
 const persist = (p: Project, c: Circuit) => resolveChain(p, c).map((l) => ({ memberId: l.memberId, lengthM: l.lengthM }));
+
+/** circuitele care trec printr-o doza de derivatie */
+export const circuitsThroughBox = (p: Project, boxId: string) => p.circuits.filter((c) => (c.chain ?? []).some((l) => l.memberId === boxId));
+
+/** trece (sau nu mai trece) circuitul printr-o doza de derivatie; doza noua intra prima in lant, dupa tablou */
+export function setCircuitThroughBox(p: Project, circuitId: string, boxId: string, on: boolean) {
+  const c = p.circuits.find((x) => x.id === circuitId);
+  if (!c || !p.boxes.some((b) => b.id === boxId && b.kind === "DD")) return;
+  const links = persist(p, c).filter((l) => l.memberId !== boxId);
+  if (on) links.unshift({ memberId: boxId, lengthM: { value: null, provenance: "estimat" } });
+  c.chain = links;
+}
 
 /** muta un membru in lant (sus / jos) */
 export function moveInChain(p: Project, circuitId: string, memberId: string, dir: -1 | 1) {

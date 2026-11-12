@@ -367,3 +367,31 @@ describe("mai multe operatii pe acelasi tip de doza", () => {
     expect(m.operations.find((o) => o.id === "op-locas")!.itemIds).toContain("bt-da-rot");
   });
 });
+
+describe("doze de derivatie in faza la rosu", () => {
+  it("DD din biblioteca intra in lantul circuitelor alese si in deviz", async () => {
+    const { addJunctionBoxes } = await import("@/lib/engine/points");
+    const { setCircuitThroughBox, circuitsThroughBox } = await import("@/lib/engine/chain");
+    const p = setup();
+    p.fast.panelDistanceM = 10;
+    p.fast.metersPerPoint = 4;
+    const r = room(p, "Living").id;
+    addBoxes(p, r, "pp-priza", 2);
+    generateCircuits(p);
+    const c = p.circuits.find((x) => x.usage === "prize")!;
+    const before = circuitCableLength(p, c).value!;
+    const ddType = p.library.boxTypes.find((t) => t.kind === "DD")!;
+    const [dd] = addJunctionBoxes(p, r, ddType.id, 1);
+    expect(dd.kind).toBe("DD");
+    setCircuitThroughBox(p, c.id, dd.id, true);
+    expect(resolveChain(p, c)[0].memberId).toBe(dd.id);
+    expect(circuitCableLength(p, c).value).toBe(before + 4);
+    expect(circuitLimitPoints(p, c)).toBe(2);
+    expect(circuitsThroughBox(p, dd.id)).toHaveLength(1);
+    expect(computeLabor(p).lines.find((l) => l.operation.id === "op-doza-dd")?.quantity).toBe(1);
+    setCircuitThroughBox(p, c.id, dd.id, false);
+    expect(circuitCableLength(p, c).value).toBe(before);
+    removeBox(p, dd.id);
+    expect(p.boxes.some((b) => b.kind === "DD")).toBe(false);
+  });
+});

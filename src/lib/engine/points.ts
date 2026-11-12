@@ -12,7 +12,8 @@ import { newBox, newDevice, removeDevices, tracked } from "../model/factory";
 import type { Box, Device, DeviceCategory, DeviceType, Library, PointPurpose, Project } from "../model/types";
 
 /** functia punctului, cu litera si culoarea folosite peste tot in aplicatie */
-export type PointFunction = "P" | "L" | "I" | "D" | "S" | "C" | "A";
+/** J = doza de derivatie (jonctiune) */
+export type PointFunction = "P" | "L" | "I" | "D" | "S" | "C" | "A" | "J";
 
 export const FUNCTION_OF: Record<DeviceCategory, PointFunction> = {
   priza: "P",
@@ -32,6 +33,7 @@ export const FUNCTION_LABEL: Record<PointFunction, string> = {
   S: "Curenti slabi",
   C: "Comanda / senzor",
   A: "Altul",
+  J: "Doza derivatie",
 };
 
 export const pointFunction = (d: Pick<Device, "category">): PointFunction => FUNCTION_OF[d.category] ?? "A";
@@ -123,6 +125,18 @@ export function addBoxes(p: Project, roomId: string, purposeId: string, n: numbe
     b.purposeId = pp.id;
     p.boxes.push(b);
     p.devices.push(makePlaceholder(p, b, pp.category, pp.powerW));
+    out.push(b);
+  }
+  return out;
+}
+
+/** adauga doze de derivatie (DD) de un tip din biblioteca */
+export function addJunctionBoxes(p: Project, roomId: string, boxTypeId: string, n = 1): Box[] {
+  if (!p.library.boxTypes.some((t) => t.id === boxTypeId && t.kind === "DD")) return [];
+  const out: Box[] = [];
+  for (let k = 0; k < Math.max(0, Math.min(50, n)); k++) {
+    const b = newBox(p, "DD", roomId, boxTypeId);
+    p.boxes.push(b);
     out.push(b);
   }
   return out;
