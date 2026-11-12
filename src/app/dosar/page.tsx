@@ -9,7 +9,8 @@ import { autoRegister, REGISTER_CATEGORY_LABEL } from "@/lib/engine/register";
 import { DOC_KIND_LABEL, diffWithCurrent, issueVersion, modifiedSinceIssue, parseSnapshot, revLabel } from "@/lib/engine/versions";
 import { fmtDate, fmtHours, fmtMoney, fmtNum, NA } from "@/lib/format";
 import { downloadJSON } from "@/lib/io/files";
-import { printPages } from "@/lib/io/svg";
+import { PdfButton } from "@/components/io/PdfButton";
+import { exportPdf } from "@/lib/io/pdf";
 import { uid } from "@/lib/model/ids";
 import { nowISO } from "@/lib/model/factory";
 import type { IssuedDocKind, IssuedVersion, Project, RegisterEntry } from "@/lib/model/types";
@@ -112,11 +113,11 @@ function DossierTab({ p }: { p: Project }) {
         <Card title="Capitole" subtitle="Bifeaza capitolele de inclus; poti exporta si un singur capitol.">
           <ChapterPicker chapters={chapters} setChapters={setChapters} />
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="primary" disabled={!chapters.length} onClick={() => printPages(box.current, `${p.info.code} dosar ${last ? revLabel(last.number) : "ciorna"}`)}>
-              Tipareste / PDF
-            </Button>
+            <PdfButton disabled={!chapters.length} run={() => exportPdf(box.current, `${p.info.code} dosar ${last ? revLabel(last.number) : "ciorna"}`)}>
+              Descarca PDF (A4)
+            </PdfButton>
           </div>
-          <p className="mt-2 text-xs text-ink-3">In fereastra de tiparire alege „Salveaza ca PDF”. Paginile sunt A4; schemele monofilare se tiparesc A4 peisaj.</p>
+          <p className="mt-2 text-xs text-ink-3">PDF-ul se salveaza direct in Descarcari. Paginile sunt A4; schemele monofilare sunt pe A4 peisaj.</p>
         </Card>
 
         <Card title={`Emite ${revLabel(next)}`} subtitle="Ingheata starea curenta a proiectului si a bibliotecii lui (tarife, materiale, reguli).">
@@ -226,9 +227,9 @@ function VersionView({ p, v }: { p: Project; v: IssuedVersion }) {
       title={`${revLabel(v.number)} · ${DOC_KIND_LABEL[v.docKind]} (doar citire)`}
       actions={
         view !== "diferente" && (
-          <Button size="sm" variant="primary" onClick={() => printPages(box.current, `${p.info.code} ${revLabel(v.number)}`)}>
-            Tipareste / PDF
-          </Button>
+          <PdfButton size="sm" run={() => exportPdf(box.current, `${p.info.code} ${revLabel(v.number)} ${view === "dosar" ? "dosar" : "oferta"}`)}>
+            Descarca PDF (A4)
+          </PdfButton>
         )
       }
     >
