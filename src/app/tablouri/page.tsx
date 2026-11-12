@@ -11,7 +11,9 @@ import { balancePhases, DEFAULT_PANEL_OPTIONS, deviceOf, generatePanelEquipment,
 import { applySizing, panelLoad, proposeSizing, type SizingProposal } from "@/lib/engine/sizing";
 import { usesDeclaredPower } from "@/lib/engine/power";
 import { removeCircuit } from "@/lib/model/factory";
-import { downloadSVG, printElement } from "@/lib/io/svg";
+import { downloadSVG } from "@/lib/io/svg";
+import { PdfButton } from "@/components/io/PdfButton";
+import { exportSvgPdf } from "@/lib/io/pdf";
 import { safeFileName } from "@/lib/io/files";
 import { fmtNum, NA } from "@/lib/format";
 import { takeCode, uid } from "@/lib/model/ids";
@@ -214,6 +216,7 @@ function PanelEditor({ p, panel, up, onDeleted }: { p: Project; panel: Panel; up
           <>
             {lay.overflow.length > 0 && <Badge tone="bad">{lay.overflow.length} aparate nu incap</Badge>}
             <Button size="sm" onClick={() => downloadSVG(dinRef.current, `${safeFileName(p.info.code)}_${panel.code}_tablou.svg`)}>Descarca SVG</Button>
+            <PdfButton size="sm" run={() => exportSvgPdf(dinRef.current, `${safeFileName(p.info.code)}_${panel.code}_tablou`)}>Descarca PDF (A4)</PdfButton>
           </>
         }
       >
@@ -236,7 +239,7 @@ function PanelEditor({ p, panel, up, onDeleted }: { p: Project; panel: Panel; up
         actions={
           <>
             <Button size="sm" onClick={() => downloadSVG(sldRef.current, `${safeFileName(p.info.code)}_${panel.code}_schema_monofilara.svg`)}>Descarca SVG</Button>
-            <Button size="sm" variant="primary" onClick={() => printElement(sldBox.current)}>Tipareste / PDF (A3)</Button>
+            <PdfButton size="sm" run={() => exportSvgPdf(sldRef.current, `${safeFileName(p.info.code)}_${panel.code}_schema_monofilara`)}>Descarca PDF (A4)</PdfButton>
           </>
         }
       >

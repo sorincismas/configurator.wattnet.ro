@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "html2canvas-pro": "^2.5.0",
     "idb-keyval": "^6.3.0",
+    "jspdf": "^4.2.1",
     "nanoid": "^6.0.2",
     "next": "16.4.5",
     "react": "19.3.0",

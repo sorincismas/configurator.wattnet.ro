@@ -10,7 +10,8 @@ import { computeLabor, resolveScope, SCOPE_PRESET_CATEGORIES, type LaborLine } f
 import { assignProformaNumber, buildDocument, categoryTitle, defaultProforma, subtotals, topDrivers, type DocDetail, type DocKind, type GroupBy } from "@/lib/engine/quote";
 import { sourceText } from "@/lib/engine/sources";
 import { fmtHours, fmtMoney, fmtNum, NA } from "@/lib/format";
-import { printElement } from "@/lib/io/svg";
+import { PdfButton } from "@/components/io/PdfButton";
+import { exportPdf } from "@/lib/io/pdf";
 import { uid } from "@/lib/model/ids";
 import type { OperationLineOverride, Project, QuoteScope } from "@/lib/model/types";
 import { useActiveProject, useApp, useUpdateActive } from "@/lib/store/store";
@@ -514,7 +515,7 @@ function Documents({ p }: { p: Project }) {
             {doc.warnings.map((w) => <p key={w}>⚠ {w}</p>)}
           </div>
         )}
-        <Button variant="primary" className="w-full justify-center" onClick={() => printElement(box.current, false)}>Tipareste / salveaza PDF (A4)</Button>
+        <PdfButton className="w-full justify-center" run={() => exportPdf(box.current, `${p.info.code} ${doc.title} ${doc.number ?? ""}`.trim())}>Descarca PDF (A4)</PdfButton>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-line bg-[#e9e7e1] p-4">
