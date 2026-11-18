@@ -149,7 +149,7 @@ export const QuoteDoc = forwardRef<HTMLDivElement, { p: Project; doc: QuoteDocum
       </div>
 
       {/* semnaturi */}
-      <div className="mt-10 grid grid-cols-2 gap-10 text-[11px]">
+      <div className="avoid-break mt-10 grid grid-cols-2 gap-10 text-[11px]">
         <div>
           <p className="font-bold">{proforma ? "Furnizor" : "Ofertant"}</p>
           <p>{f.legalName || f.name}</p>

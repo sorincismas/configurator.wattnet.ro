@@ -51,7 +51,7 @@ function Page({ children, landscape, footer }: { children: ReactNode; landscape?
   return (
     <section className={"page relative bg-white text-[#14181f] " + (landscape ? "page-landscape" : "")} style={{ width: landscape ? 1030 : 760, minHeight: landscape ? 700 : 1060, padding: landscape ? "16px" : "28px 30px 40px", margin: "0 auto 16px", fontFamily: "Arial, Helvetica, sans-serif", boxShadow: "0 1px 4px rgba(0,0,0,.12)" }}>
       {children}
-      <div className="absolute bottom-3 left-8 right-8 flex justify-between border-t border-[#cdc8bc] pt-1 text-[8.5px] text-[#6f7682]">
+      <div className="page-footer absolute bottom-3 left-8 right-8 flex justify-between border-t border-[#cdc8bc] pt-1 text-[8.5px] text-[#6f7682]">
         <span>{footer}</span>
       </div>
     </section>

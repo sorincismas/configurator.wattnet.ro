@@ -7,7 +7,10 @@
  *  - desenele SVG (scheme, tablou) se pun intregi pe o pagina A4 peisaj.
  */
 
-const MARGIN = 10; // mm
+const MARGIN = 12; // mm
+/** latimea la care se aseaza documentul pentru PDF: 700 px pe 186 mm => textul de 11 px ~ 8,5 pt */
+const PORTRAIT_PX = 700;
+const LANDSCAPE_PX = 1030;
 const FOOTER = 6; // mm rezervati pentru numarul paginii
 /** limita de pixeli a unui canvas pe telefoane (Safari) */
 const MAX_AREA = 15_000_000;
@@ -81,7 +84,8 @@ async function build(sheets: Sheet[], filename: string) {
     const cw = W - 2 * MARGIN;
     const ch = H - 2 * MARGIN - FOOTER;
     const { canvas } = s;
-    if (s.fit || canvas.height / canvas.width <= ch / cw) {
+    // un document putin mai lung decat o pagina se micsoreaza usor (max 15%) ca sa nu ramana doar semnaturile pe pagina 2
+    if (s.fit || canvas.height / canvas.width <= (ch / cw) * 1.15) {
       const k = Math.min(cw / canvas.width, ch / canvas.height);
       const w = canvas.width * k;
       addPage(s.landscape).addImage(canvas, "PNG", MARGIN + (cw - w) / 2, MARGIN, w, canvas.height * k, undefined, "FAST");
@@ -117,6 +121,29 @@ async function build(sheets: Sheet[], filename: string) {
   doc.save(safeName(filename));
 }
 
+/**
+ * Copie a paginii, asezata in afara ecranului la latimea fixa a PDF-ului: fara marginile
+ * si inaltimea minima de pe ecran (marginile le da PDF-ul), independent de zoom-ul
+ * browserului sau de latimea ferestrei.
+ */
+function stage(node: HTMLElement, width: number): { el: HTMLElement; dispose: () => void } {
+  const host = document.createElement("div");
+  // in coltul paginii, sub continut: html2canvas taie elementele aflate in afara ferestrei
+  host.style.cssText = `position:absolute;left:0;top:0;width:${width}px;background:#fff;z-index:-1000;pointer-events:none;`;
+  const el = node.cloneNode(true) as HTMLElement;
+  // pagina insasi si documentul din ea (ex. oferta, aflata intr-un container)
+  for (const x of [el, ...el.querySelectorAll<HTMLElement>(".quote-doc")]) {
+    Object.assign(x.style, { width: `${width}px`, minHeight: "0", height: "auto", margin: "0", padding: "0", boxShadow: "none", background: "#fff" });
+    x.classList.remove("mx-auto");
+  }
+  // subsolul paginii de dosar ramane sub continut (nu suprapus)
+  el.querySelectorAll<HTMLElement>(".page-footer").forEach((f) => Object.assign(f.style, { position: "static", marginTop: "14px" }));
+  // inaltimile fixe folosite doar pe ecran (coperta, schema) se pastreaza; restul curge natural
+  host.appendChild(el);
+  document.body.appendChild(host);
+  return { el, dispose: () => host.remove() };
+}
+
 /** exporta un document HTML (oferta, proforma, dosar) in PDF A4 */
 export async function exportPdf(el: HTMLElement | null, filename: string, opts: PdfOptions = {}) {
   if (!el) return;
@@ -125,11 +152,16 @@ export async function exportPdf(el: HTMLElement | null, filename: string, opts: 
   const nodes = el.querySelectorAll<HTMLElement>(".page").length ? [...el.querySelectorAll<HTMLElement>(".page")] : [el];
   const sheets: Sheet[] = [];
   for (const node of nodes) {
-    const r = node.getBoundingClientRect();
-    const scale = Math.max(1.5, Math.min(3, Math.sqrt(MAX_AREA / Math.max(1, r.width * r.height))));
-    const canvas = await html2canvas(node, { scale, backgroundColor: "#ffffff", useCORS: true, logging: false });
     const landscape = !!opts.landscape || node.classList.contains("page-landscape");
-    sheets.push({ canvas, landscape, fit: !!opts.fit || node.classList.contains("page-landscape"), breaks: breakPoints(node, scale) });
+    const { el: copy, dispose } = stage(node, landscape ? LANDSCAPE_PX : PORTRAIT_PX);
+    try {
+      const r = copy.getBoundingClientRect();
+      const scale = Math.max(2, Math.min(3.5, Math.sqrt(MAX_AREA / Math.max(1, r.width * r.height))));
+      const canvas = await html2canvas(copy, { scale, backgroundColor: "#ffffff", useCORS: true, logging: false, scrollX: 0, scrollY: 0, x: 0, y: 0, width: r.width, height: r.height, windowWidth: Math.max(window.innerWidth, r.width) });
+      sheets.push({ canvas, landscape, fit: !!opts.fit || landscape, breaks: breakPoints(copy, scale) });
+    } finally {
+      dispose();
+    }
   }
   await build(sheets, filename);
 }
